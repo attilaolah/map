@@ -7,3 +7,7 @@
 [node name="Earth" type="MeshInstance" parent="."]
 mesh = ExtResource( 1 )
 material/0 = null
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4 )
+fov = 35.0
