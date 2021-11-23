@@ -1,0 +1,34 @@
+[gd_resource type="Shader" format=2]
+
+[resource]
+code = "shader_type spatial;
+
+render_mode shadows_disabled;
+
+uniform sampler2D texture_map : hint_albedo;
+
+const float PI = 3.14159265358979323846;
+
+// Rotate UV coordinates around the Y axis by a half turn.
+// This way the camera starts facing the centre part of the texture.
+const float CAMERA_ANGLE = PI;
+
+float theta(vec3 v) {
+	return atan(v.x, v.z);
+}
+
+float phi(vec3 v) {
+	// Ignore vec3(0.0, 0.0, 0.0), as we never need to texture that point.
+	return acos(v.y / sqrt(v.x*v.x + v.y*v.y + v.z*v.z));
+}
+
+vec2 uv(vec3 v) {
+	return vec2((theta(v) + CAMERA_ANGLE) / PI / 2.0, phi(v) / PI);
+}
+
+void fragment() {
+	// VERTEX transformed to world-space.
+	// The vector is not normalised so its scale should be ignored.
+	vec3 world_orientation = (CAMERA_MATRIX * inverse(WORLD_MATRIX) * vec4(VERTEX, 1.0)).xyz;
+	ALBEDO = textureLod(texture_map, uv(world_orientation), 0.0).rgb;
+}"

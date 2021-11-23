@@ -8,6 +8,22 @@
 
 config_version=4
 
+_global_script_classes=[ {
+"base": "ArrayMesh",
+"class": "Icosahedron",
+"language": "GDScript",
+"path": "res://geometry/icosahedron.gd"
+}, {
+"base": "MeshInstance",
+"class": "Planet",
+"language": "GDScript",
+"path": "res://meshes/planet.gd"
+} ]
+_global_script_class_icons={
+"Icosahedron": "",
+"Planet": ""
+}
+
 [application]
 
 config/name="Map"

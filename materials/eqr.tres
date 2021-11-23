@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=2]
+
+[ext_resource path="res://textures/nasa_land_ocean_ice_8192.tres" type="Texture" id=1]
+[ext_resource path="res://shaders/eqr.tres" type="Shader" id=2]
+
+[resource]
+shader = ExtResource( 2 )
+shader_param/texture_map = ExtResource( 1 )
