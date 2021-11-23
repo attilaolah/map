@@ -1,11 +1,11 @@
 class_name Icosahedron
 extends ArrayMesh
 
-const phi = PI * 2.0 / 5.0
-const theta = PI / 2.0 - atan(1.0 / 2.0)
+const PHI = PI * 2.0 / 5.0
+const THETA = PI / 2.0 - atan(1.0 / 2.0)
 
 
-func build_icosahedron(mat: Material, r: float = 1.0) -> ArrayMesh:
+func build_icosahedron(r: float = 1.0) -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -17,8 +17,8 @@ func build_icosahedron(mat: Material, r: float = 1.0) -> ArrayMesh:
 	var nr: Array = []
 	var sr: Array = []
 	for i in 5:
-		nr.append(np.rotated(Vector3.RIGHT, theta).rotated(Vector3.UP, phi * i))
-		sr.append(sp.rotated(Vector3.RIGHT, theta).rotated(Vector3.UP, phi * i))
+		nr.append(np.rotated(Vector3.RIGHT, THETA).rotated(Vector3.UP, PHI * i))
+		sr.append(sp.rotated(Vector3.RIGHT, THETA).rotated(Vector3.UP, PHI * i))
 
 	for i in 5:
 		# North 5-pyramid:
@@ -33,8 +33,8 @@ func build_icosahedron(mat: Material, r: float = 1.0) -> ArrayMesh:
 		# South prism teeth:
 		add_triangle(st, nr[(i + 1) % 5], sr[(i + 4) % 5], sr[(i + 3) % 5])
 
-	st.set_material(mat)
 	return st.commit()
+
 
 func add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
 	st.add_normal(Plane(a, b, c).normal)
