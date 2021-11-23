@@ -1,17 +1,22 @@
 class_name Icosahedron
 extends ArrayMesh
 
-const PHI = PI * 2.0 / 5.0
-const THETA = PI / 2.0 - atan(1.0 / 2.0)
+const PHI: float = PI * 2.0 / 5.0
+const THETA: float = PI / 2.0 - atan(1.0 / 2.0)
+
+const NP: Vector3 = Vector3.UP
+const SP: Vector3 = Vector3.DOWN
+
+# TODO: Come up with constant expressions for all edges!
 
 
-func build_icosahedron(r: float = 1.0) -> ArrayMesh:
+static func new(r: float = 1.0) -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	# North & South poles:
-	var np: Vector3 = Vector3.UP * r
-	var sp: Vector3 = Vector3.DOWN * r
+	var np: Vector3 = NP * r
+	var sp: Vector3 = SP * r
 
 	# North & South rings:
 	var nr: Array = []
@@ -36,7 +41,7 @@ func build_icosahedron(r: float = 1.0) -> ArrayMesh:
 	return st.commit()
 
 
-func add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+static func add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
 	st.add_normal(Plane(a, b, c).normal)
 	for v in [a, b, c]:
 		st.add_vertex(v)
