@@ -23,9 +23,11 @@ float phi(vec3 v) {
 	float phi = acos(v.y / sqrt(v.x*v.x + v.y*v.y + v.z*v.z));
 	// Flip it around, so that we get (+) North & (-) South latitudes.
 	float lat = PI/2.0 - phi;
-	// Finally, apply Mercator projection transformation:
+	// Apply Mercator projection transformation:
 	// https://en.wikipedia.org/wiki/Mercator_projection#Derivation
-	return (1.0 - log(tan(lat/2.0 + PI/4.0)) / PI) / 2.0;
+	float merc = (1.0 - log(tan(lat/2.0 + PI/4.0)) / PI) / 2.0;
+	// Finally clamp any values outside the provided texture:
+	return min(max(merc, 0.0), 1.0);
 }
 
 vec2 uv(vec3 v) {
