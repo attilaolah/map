@@ -3,7 +3,7 @@
 [ext_resource path="res://meshes/planet.tres" type="SphereMesh" id=1]
 [ext_resource path="res://camera.gd" type="Script" id=2]
 [ext_resource path="res://meshes/planet.gd" type="Script" id=3]
-[ext_resource path="res://materials/eqr.tres" type="Material" id=4]
+[ext_resource path="res://materials/webm.tres" type="Material" id=4]
 
 [sub_resource type="SphereShape" id=1]
 
