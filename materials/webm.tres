@@ -1,7 +1,7 @@
 [gd_resource type="ShaderMaterial" load_steps=3 format=2]
 
 [ext_resource path="res://shaders/webm.tres" type="Shader" id=1]
-[ext_resource path="res://textures/mapbox/outdoors-v11/1024x1024@2x.png" type="Texture" id=2]
+[ext_resource path="res://textures/mapbox/outdoors-v11/8192x8192z3.png" type="Texture" id=2]
 
 [resource]
 shader = ExtResource( 1 )
