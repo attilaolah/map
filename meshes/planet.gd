@@ -3,4 +3,6 @@ extends MeshInstance
 
 
 func _ready():
-	set_mesh(Icosahedron.new())
+	var icos: Icosahedron = Icosahedron.new()
+	icos.subdivide(2)
+	set_mesh(icos.to_mesh())
