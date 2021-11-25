@@ -66,7 +66,13 @@ func to_mesh(smooth: bool = false) -> ArrayMesh:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	for i in range(0, len(faces), 3):
-		_add_triangle(st, verts[faces[i]], verts[faces[i + 1]], verts[faces[i + 2]], smooth)
+		_add_triangle(st, verts[faces[i]], verts[faces[i + 1]], verts[faces[i + 2]])
+		
+	# Adding one more triangle seems to fix the flipped normal on the last one.
+	_add_triangle(st, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
+
+	if not smooth:
+		st.generate_normals()
 
 	return st.commit()
 
@@ -97,9 +103,7 @@ func _subdivide_once() -> void:
 
 # Adds triangles based on the three vertices.
 # TODO: Add a flag for setting UV coordinates as well.
-static func _add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, smooth: bool) -> void:
-	if not smooth:
-		st.add_normal(Plane(a, b, c).normal)
+static func _add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
 	for v in [a, b, c]:
 		st.add_vertex(v)
 
