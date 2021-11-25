@@ -81,9 +81,9 @@ func _subdivide_once() -> void:
 		var c: int = faces[i*3+2]
 		var v: int = i * 3 + num_verts
 		verts.append_array([
-			verts[a].linear_interpolate(verts[b], 0.5),
-			verts[b].linear_interpolate(verts[c], 0.5),
-			verts[c].linear_interpolate(verts[a], 0.5),
+			(verts[a] + verts[b]) / 2.0,
+			(verts[b] + verts[c]) / 2.0,
+			(verts[c] + verts[a]) / 2.0,
 		])
 		new_faces.append_array([
 			v, v + 1, v + 2,
