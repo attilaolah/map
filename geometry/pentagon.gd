@@ -8,12 +8,6 @@ const ALPHA: float = PI * 2.0 / 5.0
 # https://mathworld.wolfram.com/RegularPentagon.html
 const A1: float = 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0))
 
-# Orientation and hight:
-var _o: Vector3
-
-# Radius of the circumscribed circle:
-var _r: float
-
 # Vertices. These are computed lazily.
 # Vertex "a" is the "top", others are in clockwise order.
 var a: Vector3
@@ -21,6 +15,12 @@ var b: Vector3
 var c: Vector3
 var d: Vector3
 var e: Vector3
+
+# Orientation and hight:
+var _o: Vector3
+
+# Radius of the circumscribed circle:
+var _r: float
 
 # Whether or not the vertices have been computed.
 var _materialized: bool = false
