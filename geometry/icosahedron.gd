@@ -1,11 +1,18 @@
 class_name Icosahedron
-extends ArrayMesh
+extends Node
+
+# Angle between nearby vertices:
+const ALPHA: float = PI / 2.0 - atan(1.0 / 2.0)
+
+# Edge length with no subdivision (radius = 1):
+# https://mathworld.wolfram.com/RegularIcosahedron.html
+const A1: float = 4.0 / sqrt(10.0 + 2.0 * sqrt(5.0))
 
 # Base geodesic latitudes:
 const GLAT: Array = [
 	0,  # North Pole
-	PI / 2.0 - atan(1.0 / 2.0),
-	PI / 2.0 + atan(1.0 / 2.0),
+	ALPHA,
+	PI - ALPHA,
 	PI,  # South Pole
 ]
 
@@ -36,7 +43,6 @@ const FACES: PoolIntArray = PoolIntArray([
 	6, 7, 11, 7, 8, 11, 8, 9, 11, 9, 10, 11, 10, 6, 11,
 ])
 
-
 # Instance variables:
 var glat: Array = GLAT
 var glon: Array = GLON
@@ -44,7 +50,7 @@ var verts: Array
 var faces: PoolIntArray = FACES
 
 
-func _init():
+func _init() -> void:
 	for v in range(0, len(VERTS), 2):
 		verts.append(_cart(GLON[VERTS[v]], GLAT[VERTS[v+1]]))
 
@@ -54,22 +60,20 @@ func subdivide(times: int = 1, normalize: bool = true) -> void:
 		_subdivide_once()
 	if normalize:
 		self.normalize()
-		
-		
-func normalize() -> void:
+
+
+func normalize() -> Icosahedron:
 	for i in len(verts):
 		verts[i] = verts[i].normalized()
+	return self
 
 
-func to_mesh(smooth: bool = false) -> ArrayMesh:
-	var st: SurfaceTool = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-
+func to_mesh(st: SurfaceTool, smooth: bool = false) -> ArrayMesh:
 	for i in range(0, len(faces), 3):
-		_add_triangle(st, verts[faces[i]], verts[faces[i + 1]], verts[faces[i + 2]])
+		add_triangle(st, verts[faces[i]], verts[faces[i + 1]], verts[faces[i + 2]])
 		
 	# Adding one more triangle seems to fix the flipped normal on the last one.
-	_add_triangle(st, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
+	add_triangle(st, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
 
 	if not smooth:
 		st.generate_normals()
@@ -97,13 +101,12 @@ func _subdivide_once() -> void:
 			b, v + 1, v + 0,
 			c, v + 2, v + 1,
 		])
-	# TODO: Figure out why the very last normal seems to be flipped!
 	faces = new_faces
 
 
 # Adds triangles based on the three vertices.
 # TODO: Add a flag for setting UV coordinates as well.
-static func _add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+static func add_triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
 	for v in [a, b, c]:
 		st.add_vertex(v)
 
