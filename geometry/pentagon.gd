@@ -59,5 +59,4 @@ func materialize() -> void:
 	c = a.rotated(n, -ALPHA * 2.0)
 	d = a.rotated(n, -ALPHA * 3.0)
 	e = a.rotated(n, -ALPHA * 4.0)
-	print("P: R = ", a.length(), ", A = ", a.distance_to(b), ", r = ", a.distance_to(_o))
 	_materialized = true
