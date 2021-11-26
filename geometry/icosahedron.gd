@@ -71,7 +71,7 @@ func normalize() -> Icosahedron:
 func to_mesh(st: SurfaceTool, smooth: bool = false) -> ArrayMesh:
 	for i in range(0, len(faces), 3):
 		add_triangle(st, verts[faces[i]], verts[faces[i + 1]], verts[faces[i + 2]])
-		
+
 	# Adding one more triangle seems to fix the flipped normal on the last one.
 	add_triangle(st, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
 

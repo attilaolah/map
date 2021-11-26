@@ -15,11 +15,11 @@ func to_mesh() -> ArrayMesh:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var icos: Icosahedron = Icosahedron.new()
-	
+
 	print("R = ", icos.verts[0].length())
 	print("A? = ", icos.verts[0].distance_to(icos.verts[1]))
 	print("A0 = ", Icosahedron.A1)
-	
+
 	for v in icos.verts:
 		var p: Pentagon = Pentagon.new(I1 * v, A3)
 		p.add_to(st)
