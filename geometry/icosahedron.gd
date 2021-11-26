@@ -62,10 +62,9 @@ func subdivide(times: int = 1, normalize: bool = true) -> void:
 		self.normalize()
 
 
-func normalize() -> Icosahedron:
+func normalize():
 	for i in len(verts):
 		verts[i] = verts[i].normalized()
-	return self
 
 
 func to_mesh(st: SurfaceTool, smooth: bool = false) -> ArrayMesh:
@@ -83,7 +82,7 @@ func to_mesh(st: SurfaceTool, smooth: bool = false) -> ArrayMesh:
 
 func _subdivide_once() -> void:
 	var num_verts: int = len(verts)
-	var num_faces: int = len(faces) / 3
+	var num_faces: int = int(len(faces) / 3.0)
 	var new_faces: PoolIntArray = PoolIntArray()
 	for i in num_faces:
 		var a: int = faces[i*3+0]
