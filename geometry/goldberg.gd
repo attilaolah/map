@@ -2,7 +2,7 @@ class_name Goldberg
 extends Node
 
 
-# # Edge length with no subdivision (radius = 1):
+# Edge length with no subdivision (radius = 1):
 # https://mathworld.wolfram.com/TruncatedIcosahedron.html
 const A1: float = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0))
 
@@ -16,36 +16,38 @@ var _hexagons: Array
 
 func _init():
 	for v in _icos.verts:
-		var p: Pentagon = Pentagon.new(I1 * v, A1)
-		p.materialize()
-		_pentagons.append(p)
+		_pentagons.append(Pentagon.new(I1 * v, A1, true))
+
+	var np: Pentagon = _pentagons[0]
+	var sp: Pentagon = _pentagons[11]
+	var nr: Array = _pentagons.slice(1, 5)
+	var sr: Array = _pentagons.slice(6, 10)
+
 	_hexagons.append_array([
 		# Row 1:
-		Hexagon.new(_pentagons[0].a, _pentagons[0].e, _pentagons[2].a, _pentagons[2].e, _pentagons[1].b, _pentagons[1].a),
-		Hexagon.new(_pentagons[0].e, _pentagons[0].d, _pentagons[3].a, _pentagons[3].e, _pentagons[2].b, _pentagons[2].a),
-		Hexagon.new(_pentagons[0].d, _pentagons[0].c, _pentagons[4].a, _pentagons[4].e, _pentagons[3].b, _pentagons[3].a),
-		Hexagon.new(_pentagons[0].c, _pentagons[0].b, _pentagons[5].a, _pentagons[5].e, _pentagons[4].b, _pentagons[4].a),
-		Hexagon.new(_pentagons[0].b, _pentagons[0].a, _pentagons[1].a, _pentagons[1].e, _pentagons[5].b, _pentagons[5].a),
+		Hexagon.new(np.a, np.e, nr[1].a, nr[1].e, nr[0].b, nr[0].a),
+		Hexagon.new(np.e, np.d, nr[2].a, nr[2].e, nr[1].b, nr[1].a),
+		Hexagon.new(np.d, np.c, nr[3].a, nr[3].e, nr[2].b, nr[2].a),
+		Hexagon.new(np.c, np.b, nr[4].a, nr[4].e, nr[3].b, nr[3].a),
+		Hexagon.new(np.b, np.a, nr[0].a, nr[0].e, nr[4].b, nr[4].a),
 		# Row 2:
-		# TODO: Shift by one to keep hex.a == top-left!
-		Hexagon.new(_pentagons[1].c, _pentagons[1].b, _pentagons[2].e, _pentagons[2].d, _pentagons[6].d, _pentagons[6].c),
-		Hexagon.new(_pentagons[2].c, _pentagons[2].b, _pentagons[3].e, _pentagons[3].d, _pentagons[7].d, _pentagons[7].c),
-		Hexagon.new(_pentagons[3].c, _pentagons[3].b, _pentagons[4].e, _pentagons[4].d, _pentagons[8].d, _pentagons[8].c),
-		Hexagon.new(_pentagons[4].c, _pentagons[4].b, _pentagons[5].e, _pentagons[5].d, _pentagons[9].d, _pentagons[9].c),
-		Hexagon.new(_pentagons[5].c, _pentagons[5].b, _pentagons[1].e, _pentagons[1].d, _pentagons[10].d, _pentagons[10].c),
+		Hexagon.new(nr[0].b, nr[1].e, nr[1].d, sr[0].d, sr[0].c, nr[0].c),
+		Hexagon.new(nr[1].b, nr[2].e, nr[2].d, sr[1].d, sr[1].c, nr[1].c),
+		Hexagon.new(nr[2].b, nr[3].e, nr[3].d, sr[2].d, sr[2].c, nr[2].c),
+		Hexagon.new(nr[3].b, nr[4].e, nr[4].d, sr[3].d, sr[3].c, nr[3].c),
+		Hexagon.new(nr[4].b, nr[0].e, nr[0].d, sr[4].d, sr[4].c, nr[4].c),
 		# Row 3:
-		Hexagon.new(_pentagons[1].d, _pentagons[1].c, _pentagons[6].c, _pentagons[6].b, _pentagons[10].e, _pentagons[10].d),
-		Hexagon.new(_pentagons[2].d, _pentagons[2].c, _pentagons[7].c, _pentagons[7].b, _pentagons[6].e, _pentagons[6].d),
-		Hexagon.new(_pentagons[3].d, _pentagons[3].c, _pentagons[8].c, _pentagons[8].b, _pentagons[7].e, _pentagons[7].d),
-		Hexagon.new(_pentagons[4].d, _pentagons[4].c, _pentagons[9].c, _pentagons[9].b, _pentagons[8].e, _pentagons[8].d),
-		Hexagon.new(_pentagons[5].d, _pentagons[5].c, _pentagons[10].c, _pentagons[10].b, _pentagons[9].e, _pentagons[9].d),
+		Hexagon.new(nr[0].d, nr[0].c, sr[0].c, sr[0].b, sr[4].e, sr[4].d),
+		Hexagon.new(nr[1].d, nr[1].c, sr[1].c, sr[1].b, sr[0].e, sr[0].d),
+		Hexagon.new(nr[2].d, nr[2].c, sr[2].c, sr[2].b, sr[1].e, sr[1].d),
+		Hexagon.new(nr[3].d, nr[3].c, sr[3].c, sr[3].b, sr[2].e, sr[2].d),
+		Hexagon.new(nr[4].d, nr[4].c, sr[4].c, sr[4].b, sr[3].e, sr[3].d),
 		# Row 4:
-		# TODO: Shift by one to keep hex.a == top-left!
-		Hexagon.new(_pentagons[10].a, _pentagons[10].e, _pentagons[6].b, _pentagons[6].a, _pentagons[11].d, _pentagons[11].c),
-		Hexagon.new(_pentagons[6].a, _pentagons[6].e, _pentagons[7].b, _pentagons[7].a, _pentagons[11].e, _pentagons[11].d),
-		Hexagon.new(_pentagons[7].a, _pentagons[7].e, _pentagons[8].b, _pentagons[8].a, _pentagons[11].a, _pentagons[11].e),
-		Hexagon.new(_pentagons[8].a, _pentagons[8].e, _pentagons[9].b, _pentagons[9].a, _pentagons[11].b, _pentagons[11].a),
-		Hexagon.new(_pentagons[9].a, _pentagons[9].e, _pentagons[10].b, _pentagons[10].a, _pentagons[11].c, _pentagons[11].b),
+		Hexagon.new(sr[4].e, sr[0].b, sr[0].a, sp.d, sp.c, sr[4].a),
+		Hexagon.new(sr[0].e, sr[1].b, sr[1].a, sp.e, sp.d, sr[0].a),
+		Hexagon.new(sr[1].e, sr[2].b, sr[2].a, sp.a, sp.e, sr[1].a),
+		Hexagon.new(sr[2].e, sr[3].b, sr[3].a, sp.b, sp.a, sr[2].a),
+		Hexagon.new(sr[3].e, sr[4].b, sr[4].a, sp.c, sp.b, sr[3].a),
 	])
 
 
@@ -64,8 +66,8 @@ func to_mesh() -> ArrayMesh:
 		h.add_to(st)
 		print("H: R  = ", h.a.length(), ", A = ", h.a.distance_to(h.b))
 
-	print("X: R  = 1, A = ", _pentagons[0].a.distance_to(_pentagons[1].a))
-	#Icosahedron.add_triangle(st, _pentagons[0].a, _pentagons[2].a, _pentagons[1].a)
+	#print("X: R  = 1, A = ", _pentagons[0].a.distance_to(nr[0].a))
+	#Icosahedron.add_triangle(st, _pentagons[0].a, nr[1].a, nr[0].a)
 
 	# Adding one more triangle seems to fix the flipped normal on the last one.
 	Icosahedron.add_triangle(st, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)

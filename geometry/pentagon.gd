@@ -26,9 +26,11 @@ var _r: float
 var _materialized: bool = false
 
 
-func _init(distance: Vector3, edge_len: float) -> void:
+func _init(distance: Vector3, edge_len: float, materialize: bool = false) -> void:
 	_o = distance
 	_r = edge_len / A1
+	if materialize:
+		self.materialize()
 
 
 func add_to(st: SurfaceTool) -> void:
