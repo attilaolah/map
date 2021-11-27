@@ -6,7 +6,7 @@ extends Node
 # https://mathworld.wolfram.com/TruncatedIcosahedron.html
 const A1: float = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0))
 
-# Inradius after one subdivision (with circumradius = 1).
+# Inradius at the pentagon face with no subdivision (radius = 1).
 const I1: float = sqrt(1 - pow(A1 / Pentagon.A1, 2))
 
 var _icos: Icosahedron = Icosahedron.new()
@@ -55,24 +55,13 @@ func to_mesh() -> ArrayMesh:
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
-	print("I: R  = ", _icos.verts[0].length())
-	print("I: A  = ", _icos.verts[0].distance_to(_icos.verts[1]))
-	print("I: A0 = ", Icosahedron.A1)
-
 	for p in _pentagons:
 		p.add_to(st)
-		print("P: R  = ", p.a.length(), ", A = ", p.a.distance_to(p.b))
 	for h in _hexagons:
 		h.add_to(st)
-		print("H: R  = ", h.a.length(), ", A = ", h.a.distance_to(h.b))
-
-	#print("X: R  = 1, A = ", _pentagons[0].a.distance_to(nr[0].a))
-	#Icosahedron.add_triangle(st, _pentagons[0].a, nr[1].a, nr[0].a)
 
 	# Adding one more triangle seems to fix the flipped normal on the last one.
 	Icosahedron.add_triangle(st, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
 
-
 	st.generate_normals()
 	return st.commit()
-	return _icos.to_mesh(st)
