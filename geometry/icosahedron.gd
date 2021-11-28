@@ -44,8 +44,6 @@ const FACES: PoolIntArray = PoolIntArray([
 ])
 
 # Instance variables:
-var glat: Array = GLAT
-var glon: Array = GLON
 var verts: Array
 var faces: PoolIntArray = FACES
 
@@ -62,7 +60,7 @@ func subdivide(times: int = 1, normalize: bool = true) -> void:
 		self.normalize()
 
 
-func normalize():
+func normalize() -> void:
 	for i in len(verts):
 		verts[i] = verts[i].normalized()
 
