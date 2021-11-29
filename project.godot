@@ -15,9 +15,9 @@ _global_script_classes=[ {
 "path": "res://geometry/goldberg.gd"
 }, {
 "base": "Node",
-"class": "Hexagon",
+"class": "HexagonPool",
 "language": "GDScript",
-"path": "res://geometry/hexagon.gd"
+"path": "res://geometry/hexagon_pool.gd"
 }, {
 "base": "Node",
 "class": "Icosahedron",
@@ -36,7 +36,7 @@ _global_script_classes=[ {
 } ]
 _global_script_class_icons={
 "Goldberg": "",
-"Hexagon": "",
+"HexagonPool": "",
 "Icosahedron": "",
 "Pentagon": "",
 "Planet": ""

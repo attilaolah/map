@@ -1,97 +1,122 @@
 class_name Pentagon
 extends Node
 
+# Number of faces / vertices:
+const N = 5
+
 # Angle between nearby vertices:
-const ALPHA: float = PI * 2.0 / 5.0
+const ALPHA: float = TAU / N
 
 # Edge length (radius = 1):
 # https://mathworld.wolfram.com/RegularPentagon.html
 const A1: float = 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0))
 
-# Vertices. These are computed lazily.
-# Vertex "a" is the "top", others are in clockwise order.
-var a: Vector3
-var b: Vector3
-var c: Vector3
-var d: Vector3
-var e: Vector3
+# Vertices per zoom level; 'a' is 'top', others are in clockwise order.
+var _a: Array  # <Vector3>
+var _b: Array  # <Vector3>
+var _c: Array  # <Vector3>
+var _d: Array  # <Vector3>
+var _e: Array  # <Vector3>
 
-# Orientation and hight:
-var _o: Vector3
+# All vertex arrays (a to e).
+var _verts: Array = [_a, _b, _c, _d, _e]  # <Array<Vector3>>
+# Radius of the circumscribed circle, per zoom level:
+var _r: Array  # <float>
 
-# Radius of the circumscribed circle:
-var _r: float
+# Centre points, per zoom level:
+var _origin: Array  # <Vector3>
 
-# Whether or not the vertices have been computed.
-var _materialized: bool = false
+# Orientation of the centre point, normalised:
+var _orientation: Vector3
+
+# Current zoom level (0-based):
+var _zoom: int = 0
+
+var _is_pole: bool
 
 
 func _init(distance: Vector3, edge_len: float) -> void:
-	_o = distance
-	_r = edge_len / A1
+	_is_pole = is_equal_approx(distance.x, 0.0) and is_equal_approx(distance.z, 0.0)
+	_orientation = distance.normalized()
+	_origin.append(distance)
+	_r.append(edge_len / A1)
+	_compute_vertices(_zoom)
 
 
 func subdivide() -> Pentagon:
-	var l: float = _o.length()
-	var r2: float = _r * _r + l * l
-
-	_materialized = false
-	_o = _o.normalized() * sqrt(r2 - _r * _r / 4.0)
-	_r /= 2.0
-
+	if len(_r) == _zoom + 1:
+		_precompute_next()
+	_zoom += 1
 	return self
 
 
-func is_pole() -> bool:
-	return is_equal_approx(_o.x, 0.0) and is_equal_approx(_o.z, 0.0)
+func grow_2(pool: HexagonPool) -> void:
+	if _is_pole:
+		# The poles should not be growing any neighbour hex tiles.
+		return
+	var h1: int = pool.add_regular(_b[_zoom], _a[_zoom])
+	pool.add_next_to(h1, 5)
 
 
-func grow_2() -> Array:
-	if not _materialized:
-		materialize()
+func edge_at(edge: int, zoom: int) -> Array:
+	while len(_r) <= zoom + 1:
+		_precompute_next()
+	var verts: Array = [_a, _b, _c, _d, _e]
 	return [
-		Hexagon.new(b, a),
-		Hexagon.new(c, b),
+		verts[edge % N][zoom],
+		verts[(edge + 1) % N][zoom],
 	]
-
-func grow_5() -> Array:
-	var arr: Array = grow_2()
-	arr.append_array([
-		Hexagon.new(d, c),
-		Hexagon.new(e, d),
-		Hexagon.new(a, e),
-	])
-	return arr
-
-
-func materialize() -> Pentagon:
-	var n: Vector3 = _o.normalized()
-	if is_pole():
-		# North Pole "top" should point towards Vector3.BACK.
-		# South Pole "top" should point towards Vector3.FORWARD.
-		a = Vector3(0.0, _o.y, sign(n.y) * _r)
-	else:
-		# Icosahedron north or south ring vertex.
-		# The "top" of the pentagon should point away from the XZ plane.
-		a = _o.move_toward(
-			# Intersection of the pentagon's plane with the XY and YZ planes:
-			Plane(n, _o.length()).intersect_3(Plane.PLANE_XY, Plane.PLANE_YZ),
-			_r  # Move by "radius" in the plane
-		)
-
-	# Rotate by a negative amount (clockwise) to match Godot's winding order.
-	b = a.rotated(n, -ALPHA * 1.0)
-	c = a.rotated(n, -ALPHA * 2.0)
-	d = a.rotated(n, -ALPHA * 3.0)
-	e = a.rotated(n, -ALPHA * 4.0)
-	_materialized = true
-
-	return self
 
 
 func add_to(st: SurfaceTool) -> void:
-	if not _materialized:
-		materialize()
-	Icosahedron.add_triangle(st, a, b, c)
-	Icosahedron.add_triangle(st, a, c, d)
-	Icosahedron.add_triangle(st, a, d, e)
+	Icosahedron.add_triangle(st, _a[_zoom], _b[_zoom], _c[_zoom])
+	Icosahedron.add_triangle(st, _a[_zoom], _c[_zoom], _d[_zoom])
+	Icosahedron.add_triangle(st, _a[_zoom], _d[_zoom], _e[_zoom])
+
+
+func _precompute_next() -> void:
+	var imax: int = len(_r) - 1
+	var lmax: float = _origin[imax].length()
+	var rmin: float = _r[imax]
+	var rmin2: float = rmin * rmin
+	var r2: float = rmin2 + lmax * lmax
+
+	_origin.append(_orientation * sqrt(r2 - rmin2 / 4.0))
+	_r.append(rmin / 2.0)
+
+	# With the poles & radius updated, need to re-calculate the vertices.
+	_compute_vertices(_zoom + 1)
+
+
+# Compute vertices at the specified zoom level.
+func _compute_vertices(zoom: int) -> void:
+	assert(len(_origin) == zoom + 1)
+	assert(len(_r) == zoom + 1)
+
+	var a: Vector3
+	if _is_pole:
+		# North Pole "top" should point towards Vector3.BACK.
+		# South Pole "top" should point towards Vector3.FORWARD.
+		a = Vector3(0.0, _origin[zoom].y, sign(_orientation.y) * _r[zoom])
+	else:
+		# Icosahedron north or south ring vertex.
+		# The "top" of the pentagon should point away from the XZ plane.
+		var p: Plane = Plane(_orientation, _origin[zoom].length())
+		a = _origin[zoom].move_toward(
+			# Intersection of the pentagon's plane with the XY and YZ planes:
+			p.intersect_3(Plane.PLANE_XY, Plane.PLANE_YZ),
+			_r[zoom]  # Move by "radius" in the plane
+		)
+	_a.append(a)
+
+	# Rotate by a negative amount (clockwise) to match Godot's winding order.
+	_b.append(a.rotated(_orientation, -ALPHA * 1.0))
+	_c.append(a.rotated(_orientation, -ALPHA * 2.0))
+	_d.append(a.rotated(_orientation, -ALPHA * 3.0))
+	_e.append(a.rotated(_orientation, -ALPHA * 4.0))
+	_validate(zoom)
+
+
+func _validate(zoom: int) -> void:
+	var o: Vector3 = (_a[zoom] + _b[zoom] + _c[zoom] + _d[zoom] + _e[zoom]) / N
+	assert(_origin[zoom].is_equal_approx(o))
