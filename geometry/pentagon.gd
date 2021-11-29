@@ -26,22 +26,36 @@ var _r: float
 var _materialized: bool = false
 
 
-func _init(distance: Vector3, edge_len: float, materialize: bool = false) -> void:
+func _init(distance: Vector3, edge_len: float) -> void:
 	_o = distance
 	_r = edge_len / A1
-	if materialize:
-		self.materialize()
 
 
-func add_to(st: SurfaceTool) -> void:
+func subdivide() -> Pentagon:
+	var l: float = _o.length()
+	var r2: float = _r * _r + l * l
+
+	_materialized = false
+	_o = _o.normalized() * sqrt(r2 - _r * _r / 4.0)
+	_r /= 2.0
+
+	return self
+
+
+func grow() -> Array:
 	if not _materialized:
 		materialize()
-	Icosahedron.add_triangle(st, a, b, c)
-	Icosahedron.add_triangle(st, a, c, d)
-	Icosahedron.add_triangle(st, a, d, e)
+	#return []
+	return [
+		Hexagon.new(b, a),
+		Hexagon.new(c, b),
+		Hexagon.new(d, c),
+		Hexagon.new(e, d),
+		Hexagon.new(a, e),
+	]
 
 
-func materialize() -> void:
+func materialize() -> Pentagon:
 	var n: Vector3 = _o.normalized()
 	if is_equal_approx(_o.x, 0.0) and is_equal_approx(_o.z, 0.0):
 		# North Pole "top" should point towards Vector3.BACK.
@@ -62,3 +76,13 @@ func materialize() -> void:
 	d = a.rotated(n, -ALPHA * 3.0)
 	e = a.rotated(n, -ALPHA * 4.0)
 	_materialized = true
+
+	return self
+
+
+func add_to(st: SurfaceTool) -> void:
+	if not _materialized:
+		materialize()
+	Icosahedron.add_triangle(st, a, b, c)
+	Icosahedron.add_triangle(st, a, c, d)
+	Icosahedron.add_triangle(st, a, d, e)

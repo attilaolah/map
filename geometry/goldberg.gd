@@ -12,11 +12,11 @@ const I1: float = sqrt(1 - pow(A1 / Pentagon.A1, 2))
 var _icos: Icosahedron = Icosahedron.new()
 
 var _pentagons: Array = []
-var _hexagons: Array
+var _hexagons: Array = []
 
 func _init():
 	for v in _icos.verts:
-		_pentagons.append(Pentagon.new(I1 * v, A1, true))
+		_pentagons.append(Pentagon.new(I1 * v, A1).materialize())
 
 	var np: Pentagon = _pentagons[0]
 	var sp: Pentagon = _pentagons[11]
@@ -25,30 +25,42 @@ func _init():
 
 	_hexagons.append_array([
 		# Row 1:
-		Hexagon.new(np.a, np.e, nr[1].a, nr[1].e, nr[0].b, nr[0].a),
-		Hexagon.new(np.e, np.d, nr[2].a, nr[2].e, nr[1].b, nr[1].a),
-		Hexagon.new(np.d, np.c, nr[3].a, nr[3].e, nr[2].b, nr[2].a),
-		Hexagon.new(np.c, np.b, nr[4].a, nr[4].e, nr[3].b, nr[3].a),
-		Hexagon.new(np.b, np.a, nr[0].a, nr[0].e, nr[4].b, nr[4].a),
+		Hexagon.new(np.a, np.e),
+		Hexagon.new(np.e, np.d),
+		Hexagon.new(np.d, np.c),
+		Hexagon.new(np.c, np.b),
+		Hexagon.new(np.b, np.a),
 		# Row 2:
-		Hexagon.new(nr[0].b, nr[1].e, nr[1].d, sr[0].d, sr[0].c, nr[0].c),
-		Hexagon.new(nr[1].b, nr[2].e, nr[2].d, sr[1].d, sr[1].c, nr[1].c),
-		Hexagon.new(nr[2].b, nr[3].e, nr[3].d, sr[2].d, sr[2].c, nr[2].c),
-		Hexagon.new(nr[3].b, nr[4].e, nr[4].d, sr[3].d, sr[3].c, nr[3].c),
-		Hexagon.new(nr[4].b, nr[0].e, nr[0].d, sr[4].d, sr[4].c, nr[4].c),
+		Hexagon.new(nr[0].b, nr[1].e),
+		Hexagon.new(nr[1].b, nr[2].e),
+		Hexagon.new(nr[2].b, nr[3].e),
+		Hexagon.new(nr[3].b, nr[4].e),
+		Hexagon.new(nr[4].b, nr[0].e),
 		# Row 3:
-		Hexagon.new(nr[0].d, nr[0].c, sr[0].c, sr[0].b, sr[4].e, sr[4].d),
-		Hexagon.new(nr[1].d, nr[1].c, sr[1].c, sr[1].b, sr[0].e, sr[0].d),
-		Hexagon.new(nr[2].d, nr[2].c, sr[2].c, sr[2].b, sr[1].e, sr[1].d),
-		Hexagon.new(nr[3].d, nr[3].c, sr[3].c, sr[3].b, sr[2].e, sr[2].d),
-		Hexagon.new(nr[4].d, nr[4].c, sr[4].c, sr[4].b, sr[3].e, sr[3].d),
+		Hexagon.new(nr[0].d, nr[0].c),
+		Hexagon.new(nr[1].d, nr[1].c),
+		Hexagon.new(nr[2].d, nr[2].c),
+		Hexagon.new(nr[3].d, nr[3].c),
+		Hexagon.new(nr[4].d, nr[4].c),
 		# Row 4:
-		Hexagon.new(sr[4].e, sr[0].b, sr[0].a, sp.d, sp.c, sr[4].a),
-		Hexagon.new(sr[0].e, sr[1].b, sr[1].a, sp.e, sp.d, sr[0].a),
-		Hexagon.new(sr[1].e, sr[2].b, sr[2].a, sp.a, sp.e, sr[1].a),
-		Hexagon.new(sr[2].e, sr[3].b, sr[3].a, sp.b, sp.a, sr[2].a),
-		Hexagon.new(sr[3].e, sr[4].b, sr[4].a, sp.c, sp.b, sr[3].a),
+		Hexagon.new(sr[4].e, sr[0].b),
+		Hexagon.new(sr[0].e, sr[1].b),
+		Hexagon.new(sr[1].e, sr[2].b),
+		Hexagon.new(sr[2].e, sr[3].b),
+		Hexagon.new(sr[3].e, sr[4].b),
 	])
+
+	# TODO: Figure out why subdivision is not working!
+	return
+	print(_pentagons[0].a.distance_to(_pentagons[0].b))
+	# First mandatory subdivision.
+	var tmp: Array = []
+	for h in _hexagons:
+		h.subdivide()
+		tmp.append(Hexagon.new(h.c, h.b))
+	_hexagons.append_array(tmp)
+	for p in _pentagons:
+		p.subdivide()  # _hexagons.append_array(p.subdivide().grow())
 
 
 func to_mesh() -> ArrayMesh:
