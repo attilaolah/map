@@ -42,22 +42,31 @@ func subdivide() -> Pentagon:
 	return self
 
 
-func grow() -> Array:
+func is_pole() -> bool:
+	return is_equal_approx(_o.x, 0.0) and is_equal_approx(_o.z, 0.0)
+
+
+func grow_2() -> Array:
 	if not _materialized:
 		materialize()
-	#return []
 	return [
 		Hexagon.new(b, a),
 		Hexagon.new(c, b),
+	]
+
+func grow_5() -> Array:
+	var arr: Array = grow_2()
+	arr.append_array([
 		Hexagon.new(d, c),
 		Hexagon.new(e, d),
 		Hexagon.new(a, e),
-	]
+	])
+	return arr
 
 
 func materialize() -> Pentagon:
 	var n: Vector3 = _o.normalized()
-	if is_equal_approx(_o.x, 0.0) and is_equal_approx(_o.z, 0.0):
+	if is_pole():
 		# North Pole "top" should point towards Vector3.BACK.
 		# South Pole "top" should point towards Vector3.FORWARD.
 		a = Vector3(0.0, _o.y, sign(n.y) * _r)
