@@ -13,7 +13,7 @@ class _MapUIState extends State<MapUI> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned.fill(
+          const Positioned.fill(
             child: SizedBox.shrink(),
           ),
           Positioned(
@@ -26,9 +26,7 @@ class _MapUIState extends State<MapUI> {
               ),
               iconSize: 24,
               splashRadius: 24,
-              onPressed: () {
-                print('Settings pressed.');
-              },
+              onPressed: () {},
             ),
           ),
         ],
