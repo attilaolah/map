@@ -1,7 +1,14 @@
+import 'dart:html';
 import 'package:flutter/material.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  removeFlutterLoader();
   runApp(const Map());
+}
+
+void removeFlutterLoader() {
+  document.dispatchEvent(Event('dart-app-ready'));
 }
 
 class Map extends StatelessWidget {
@@ -14,7 +21,7 @@ class Map extends StatelessWidget {
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
+        scaffoldBackgroundColor: Colors.transparent,
       ),
       home: const MapUI(),
       // Hide the annoying debug ribbon, it covers the settings icon.
@@ -36,6 +43,9 @@ class _MapUIState extends State<MapUI> {
     return Scaffold(
       body: Stack(
         children: [
+          Positioned.fill(
+            child: SizedBox.shrink(),
+          ),
           Positioned(
             top: 16,
             right: 16,
