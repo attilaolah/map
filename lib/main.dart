@@ -40,16 +40,16 @@ class _MapUIState extends State<MapUI> {
             top: 16,
             right: 16,
             child: IconButton(
-			  icon: const Icon(
+              icon: const Icon(
                 Icons.settings,
                 semanticLabel: 'Settings',
               ),
               iconSize: 24,
               splashRadius: 24,
-			  onPressed: () {
+              onPressed: () {
                 print('Settings pressed.');
-			  },
-			),
+              },
+            ),
           ),
         ],
       ),
