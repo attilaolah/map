@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-class MapUI extends StatefulWidget {
-  const MapUI({Key? key}) : super(key: key);
+import '../web_gpu/map.dart';
+
+class HexMapUi extends StatefulWidget {
+  const HexMapUi({Key? key}) : super(key: key);
 
   @override
-  State<MapUI> createState() => _MapUIState();
+  State<HexMapUi> createState() => _HexMapUiState();
 }
 
-class _MapUIState extends State<MapUI> {
+class _HexMapUiState extends State<HexMapUi> {
+  final webGPUMap = WebGPUMap();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,5 +36,15 @@ class _MapUIState extends State<MapUI> {
         ],
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance?.addPostFrameCallback((_) async {
+      await webGPUMap.init();
+      webGPUMap.configure();
+      webGPUMap.drawTriangle();
+    });
   }
 }

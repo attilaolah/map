@@ -1,15 +1,8 @@
-import 'dart:html';
 import 'package:flutter/material.dart';
 
-import 'map.dart';
+import 'hex_map.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  removeFlutterLoader();
-  runApp(const Map());
+  runApp(const HexMap());
 }
-
-void removeFlutterLoader() {
-  document.dispatchEvent(Event('dart-app-ready'));
-}
-
