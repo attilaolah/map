@@ -19,7 +19,7 @@ fn main() {
                 input:
                     KeyboardInput {
                         state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
+                        virtual_keycode: Some(VirtualKeyCode::Escape | VirtualKeyCode::Q),
                         ..
                     },
                 ..
