@@ -8,13 +8,13 @@ import 'package:js/js.dart';
 
 extension NavigatorGPU on Navigator {
   GPU get gpu {
-    return GPU(getProperty(this, 'gpu'));
+    return GPU(getProperty(this, 'gpu') as Object);
   }
 }
 
 extension CanvasElementWebGPU on CanvasElement {
   GPUCanvasContext getContextGPU() {
-    Object? ctx = getContext('webgpu');
+    final Object? ctx = getContext('webgpu');
     if (ctx == null) {
       throw Exception('WebGPU canvas context not available.');
     }
@@ -24,47 +24,47 @@ extension CanvasElementWebGPU on CanvasElement {
 
 
 class GPU {
-  GPU(this._gpu);
-  final dynamic _gpu;
+  GPU(final this._gpu);
+  final Object _gpu;
 
   Future<GPUAdapter> requestAdapter() async {
-    dynamic x = await promiseToFuture(callMethod(_gpu, 'requestAdapter', []));
-    GPUAdapter a = GPUAdapter(x);
-    return a;
+    return GPUAdapter(await promiseToFuture(
+      callMethod(_gpu, 'requestAdapter', []) as Object));
   }
 }
 
 class GPUAdapter {
-  GPUAdapter(this._js);
-  final dynamic _js;
+  GPUAdapter(final this._js);
+  final Object _js;
 
   Future<GPUDevice> requestDevice() async {
-    return GPUDevice(await promiseToFuture(callMethod(_js, 'requestDevice', [])));
+    return GPUDevice(await promiseToFuture(
+      callMethod(_js, 'requestDevice', []) as Object));
   }
 }
 
 class GPUDevice {
-  GPUDevice(this._js);
-  final dynamic _js;
+  GPUDevice(final this._js);
+  final Object _js;
 
   GPUQueue get queue {
-    return getProperty(_js, 'queue');
+    return getProperty(_js, 'queue') as GPUQueue;
   }
   GPUCommandEncoder createCommandEncoder() {
-    return callMethod(_js, 'createCommandEncoder', []);
+    return callMethod(_js, 'createCommandEncoder', []) as GPUCommandEncoder;
   }
-  GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor) {
-    return callMethod(_js, 'createRenderPipeline', [descriptor]);
+  GPURenderPipeline createRenderPipeline(final GPURenderPipelineDescriptor descriptor) {
+    return callMethod(_js, 'createRenderPipeline', [descriptor]) as GPURenderPipeline;
   }
-  GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor) {
-    return callMethod(_js, 'createShaderModule', [descriptor]);
+  GPUShaderModule createShaderModule(final GPUShaderModuleDescriptor descriptor) {
+    return callMethod(_js, 'createShaderModule', [descriptor]) as GPUShaderModule;
   }
 }
 
 @JS()
 class GPUQueue {
   @JS()
-  external submit(List<GPUCommandBuffer> commandBuffers);
+  external void submit(final List<GPUCommandBuffer> commandBuffers);
 }
 
 @JS()
@@ -73,19 +73,19 @@ class GPUCommandBuffer {}
 @JS()
 class GPUCommandEncoder {
   @JS()
-  external GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
+  external GPURenderPassEncoder beginRenderPass(final GPURenderPassDescriptor descriptor);
   @JS()
-  external GPUCommandBuffer finish([GPUCommandBufferDescriptor? descriptor]);
+  external GPUCommandBuffer finish([final GPUCommandBufferDescriptor? descriptor]);
 }
 
 @JS()
 class GPURenderPassEncoder {
   @JS()
-  external setPipeline(GPURenderPipeline pipeline);
+  external void setPipeline(final GPURenderPipeline pipeline);
   @JS()
-  external draw(int vertexCount, int instanceCount, int firstVertex, int firstInstance);
+  external void draw(final int vertexCount, final int instanceCount, final int firstVertex, final int firstInstance);
   @JS()
-  external endPass();
+  external void endPass();
 }
 
 @JS()
@@ -95,10 +95,10 @@ class GPURenderPipeline {}
 class GPUShaderModule {}
 
 class GPUCanvasContext {
-  GPUCanvasContext(this._js);
-  final dynamic _js;
+  GPUCanvasContext(final this._js);
+  final Object _js;
 
-  configure(GPUCanvasConfiguration configuration) {
+  void configure(final GPUCanvasConfiguration configuration) {
     // TODO: Avoid the use of [jsify()] (needed for the 'device' key below).
     callMethod(_js, 'configure', [jsify(<String, dynamic>{
       'device': configuration.device._js,
@@ -106,18 +106,18 @@ class GPUCanvasContext {
       'size': configuration.size,
     })]);
   }
-  String getPreferredFormat(GPUAdapter adapter) {
-    return callMethod(_js, 'getPreferredFormat', [adapter._js]);
+  String getPreferredFormat(final GPUAdapter adapter) {
+    return callMethod(_js, 'getPreferredFormat', [adapter._js]) as String;
   }
   GPUTexture getCurrentTexture() {
-    return callMethod(_js, 'getCurrentTexture', []);
+    return callMethod(_js, 'getCurrentTexture', []) as GPUTexture;
   }
 }
 
 @JS()
 class GPUTexture {
   @JS()
-  external GPUTextureView createView([GPUTextureViewDescriptor? descriptor]);
+  external GPUTextureView createView([final GPUTextureViewDescriptor? descriptor]);
 }
 
 @JS()
@@ -133,9 +133,9 @@ class GPUCanvasConfiguration {
 
   @JS()
   external factory GPUCanvasConfiguration({
-    required GPUDevice device,
-    required String format,  // TODO: enum!
-    GPUExtent3DDict size,
+    required final GPUDevice device,
+    required final String format,  // TODO: enum!
+    final GPUExtent3DDict size,
   });
 }
 
@@ -147,8 +147,8 @@ class GPUExtent3DDict {
 
   @JS()
   external factory GPUExtent3DDict({
-    required int width,
-    int height,
+    required final int width,
+    final int height,
   });
 }
 
@@ -161,9 +161,9 @@ class GPURenderPipelineDescriptor {
 
   @JS()
   external factory GPURenderPipelineDescriptor({
-    required GPUVertexState vertex,
-    GPUPrimitiveState primitive,
-    GPUFragmentState fragment,
+    required final GPUVertexState vertex,
+    final GPUPrimitiveState primitive,
+    final GPUFragmentState fragment,
   });
 }
 
@@ -172,8 +172,8 @@ class GPURenderPipelineDescriptor {
 class GPUVertexState extends GPUProgrammableStage {
   @JS()
   external factory GPUVertexState({
-    required GPUShaderModule module,
-    required String entryPoint,
+    required final GPUShaderModule module,
+    required final String entryPoint,
   });
 }
 
@@ -186,8 +186,8 @@ class GPUProgrammableStage {
 
   @JS()
   external factory GPUProgrammableStage({
-    required GPUShaderModule module,
-    required String entryPoint,
+    required final GPUShaderModule module,
+    required final String entryPoint,
   });
 }
 
@@ -198,7 +198,7 @@ class GPUShaderModuleDescriptor {
 
   @JS()
   external factory GPUShaderModuleDescriptor({
-    required String code,
+    required final String code,
   });
 }
 
@@ -209,7 +209,7 @@ class GPUPrimitiveState {
 
   @JS()
   external factory GPUPrimitiveState({
-    required String topology,
+    required final String topology,
   });
 }
 
@@ -220,9 +220,9 @@ class GPUFragmentState extends GPUProgrammableStage {
 
   @JS()
   external factory GPUFragmentState({
-    required GPUShaderModule module,
-    required String entryPoint,
-    required List<GPUColorTargetState> targets,
+    required final GPUShaderModule module,
+    required final String entryPoint,
+    required final List<GPUColorTargetState> targets,
   });
 }
 
@@ -233,7 +233,7 @@ class GPUColorTargetState {
 
   @JS()
   external factory GPUColorTargetState({
-    required String format,
+    required final String format,
   });
 }
 
@@ -248,7 +248,7 @@ class GPURenderPassDescriptor {
 
   @JS()
   external factory GPURenderPassDescriptor({
-    required List<GPURenderPassColorAttachment> colorAttachments,
+    required final List<GPURenderPassColorAttachment> colorAttachments,
   });
 }
 
@@ -261,9 +261,9 @@ class GPURenderPassColorAttachment {
 
   @JS()
   external factory GPURenderPassColorAttachment({
-    required GPUTextureView view,
-    required GPUColor loadValue,
-    required String storeOp,
+    required final GPUTextureView view,
+    required final GPUColor loadValue,
+    required final String storeOp,
   });
 }
 
@@ -277,10 +277,10 @@ class GPUColor {
 
   @JS()
   external factory GPUColor({
-    required double r,
-    required double g,
-    required double b,
-    required double a,
+    required final double r,
+    required final double g,
+    required final double b,
+    required final double a,
   });
 }
 

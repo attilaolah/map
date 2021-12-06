@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'ui/hex_map_ui.dart';
 
 class HexMap extends StatelessWidget {
-  const HexMap({Key? key}) : super(key: key);
+  const HexMap({final Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     return MaterialApp(
       title: 'Hex Map',
       themeMode: ThemeMode.dark,

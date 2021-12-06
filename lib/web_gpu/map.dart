@@ -4,6 +4,8 @@ import 'dart:html';
 import 'triangle.dart';
 import 'support.dart';
 
+import 'package:resize_observer/resize_observer.dart' as ro;
+
 
 class WebGPUMap {
   WebGPUMap() {
@@ -23,7 +25,7 @@ class WebGPUMap {
   }
 
   final CanvasElement _canvas = () {
-    CanvasElement c = Element.canvas() as CanvasElement;
+    final CanvasElement c = Element.canvas() as CanvasElement;
     // Apply styles to the canvas before injecting.
     c.style.width = '100vw';
     c.style.height = '100vh';
@@ -36,13 +38,22 @@ class WebGPUMap {
 
   // Device pixel ratio (non-configurable).
   late final double _dpr;
-  late final GPUExtent3DDict _size;
+  late GPUExtent3DDict _size;
   late final String _format;
 
   Future<void> init() async {
     _adapter = await window.navigator.gpu.requestAdapter();
     _device = await _adapter.requestDevice();
     _format = _ctx.getPreferredFormat(_adapter);
+
+    configure();
+    ro.ResizeObserver.observe(_canvas, (Element el, num x, num y, num width, num height, num top, num bottom, num left, num right) {
+      _size = GPUExtent3DDict(
+        width: (width * _dpr).floor(),
+        height: (height * _dpr).floor(),
+      );
+      configure();
+    });
   }
 
   void configure() {
@@ -54,11 +65,10 @@ class WebGPUMap {
   }
 
   void drawTriangle() {
-    final triangle = Triangle(
+    Triangle(
       ctx: _ctx,
       device: _device,
       format: _format,
-    );
-    triangle.draw();
+    ).draw();
   }
 }

@@ -5,14 +5,14 @@ import 'support.dart';
 
 class Triangle {
   Triangle({
-    required this.ctx,
-    required this.device,
-    required this.format,
+    required final this.ctx,
+    required final this.device,
+    required final this.format,
   });
 
-  GPUCanvasContext ctx;
-  GPUDevice device;
-  String format;
+  final GPUCanvasContext ctx;
+  final GPUDevice device;
+  final String format;
 
   void draw() {
     final GPURenderPipeline pipeline = device.createRenderPipeline(
@@ -20,7 +20,7 @@ class Triangle {
         vertex: GPUVertexState(
           module: device.createShaderModule(
             GPUShaderModuleDescriptor(
-              code: triangleVertWGSL,
+              code: vertWGSL,
             ),
           ),
           entryPoint: 'main',
@@ -28,7 +28,7 @@ class Triangle {
         fragment: GPUFragmentState(
           module: device.createShaderModule(
             GPUShaderModuleDescriptor(
-              code: redFragWGSL,
+              code: fragWGSL,
             ),
           ),
           entryPoint: 'main',
@@ -41,7 +41,7 @@ class Triangle {
     );
 
     late void Function(num) frame;
-    frame = (num f) {
+    frame = (final num _) {
       final GPUCommandEncoder cmdEncoder = device.createCommandEncoder();
       final GPUTextureView textureView = ctx.getCurrentTexture().createView();
 
@@ -55,7 +55,7 @@ class Triangle {
         ],
       ));
       passEncoder.setPipeline(pipeline);
-      passEncoder.draw(3, 1, 0, 0);
+      passEncoder.draw(6, 1, 0, 0);
       passEncoder.endPass();
 
       device.queue.submit([cmdEncoder.finish()]);
@@ -67,22 +67,26 @@ class Triangle {
 }
 
 
-const triangleVertWGSL = '''
+const vertWGSL = '''
 [[stage(vertex)]]
-fn main([[builtin(vertex_index)]] VertexIndex : u32)
-     -> [[builtin(position)]] vec4<f32> {
-  var pos = array<vec2<f32>, 3>(
-      vec2<f32>(0.0, 0.5),
-      vec2<f32>(-0.5, -0.5),
-      vec2<f32>(0.5, -0.5));
+fn main([[builtin(vertex_index)]] idx : u32) -> [[builtin(position)]] vec4<f32> {
+  var scale = 0.75;
+  var pos = array<vec2<f32>, 6>(
+    vec2<f32>( scale,  scale),
+    vec2<f32>(-scale,  scale),
+    vec2<f32>(-scale, -scale),
+    vec2<f32>( scale,  scale),
+    vec2<f32>(-scale, -scale),
+    vec2<f32>( scale, -scale),
+  );
 
-  return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
+  return vec4<f32>(pos[idx], 0.0, 1.0);
 }
 ''';
 
-const redFragWGSL = '''
+const fragWGSL = '''
 [[stage(fragment)]]
 fn main() -> [[location(0)]] vec4<f32> {
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+  return vec4<f32>(1.0, 0.0, 1.0, 1.0);
 }
 ''';

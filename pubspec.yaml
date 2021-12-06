@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   js: ^0.6.3
+  resize_observer: ^1.1.0
 
 dev_dependencies:
   flutter_test:

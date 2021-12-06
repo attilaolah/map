@@ -1,5 +1,40 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  language:
+    strict-raw-types: true
+  strong-mode:
+    implicit-casts: true
+    implicit-dynamic: true
+
 linter:
   rules:
+    # Ignore web-libraries warning:.
     avoid_web_libraries_in_flutter: false
+
+    # All 'unnecessary' linters enabled:
+    unnecessary_await_in_return: true
+    unnecessary_brace_in_string_interps: true
+    unnecessary_const: true
+    unnecessary_constructor_name: true
+    unnecessary_getters_setters: true
+    unnecessary_lambdas: true
+    unnecessary_new: true
+    unnecessary_null_aware_assignments: true
+    unnecessary_null_checks: true
+    unnecessary_null_in_if_null_operators: true
+    unnecessary_nullable_for_final_variable_declarations: true
+    unnecessary_overrides: true
+    unnecessary_parenthesis: true
+    unnecessary_raw_strings: true
+    unnecessary_statements: true
+    unnecessary_string_escapes: true
+    unnecessary_string_interpolations: true
+    unnecessary_this: true
+
+    # But prefer 'final' everywhere:
+    unnecessary_final: false
+    prefer_final_fields: true
+    prefer_final_in_for_each: true
+    prefer_final_locals: true
+    prefer_final_parameters: true
