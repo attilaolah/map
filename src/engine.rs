@@ -1,5 +1,9 @@
 use std::iter;
-use winit::{event::WindowEvent, window::Window};
+
+use wgpu::util::DeviceExt;
+use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
+
+use crate::camera::Camera;
 
 pub struct Engine {
     surface: wgpu::Surface,
@@ -8,7 +12,10 @@ pub struct Engine {
     config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
 
-    pub size: winit::dpi::PhysicalSize<u32>,
+    pub size: PhysicalSize<u32>,
+    cam: Camera,
+    cam_buf: wgpu::Buffer,
+    cam_bind_group: wgpu::BindGroup,
 }
 
 impl Engine {
@@ -49,15 +56,53 @@ impl Engine {
         };
         surface.configure(&device, &config);
 
+        // Camera setup:
+
+        let cam = Camera::new(16.0, size.width, size.height);
+
+        let cam_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[cam.uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let cam_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("cam_bind_group_layout"),
+            });
+
+        let cam_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &cam_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: cam_buf.as_entire_binding(),
+            }],
+            label: Some("cam_bind_group"),
+        });
+
+        // Shader setup:
+
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Triangle Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/triangle.wgsl").into()),
         });
 
+        // Render pipeline setup:
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&cam_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -104,7 +149,11 @@ impl Engine {
             queue,
             config,
             render_pipeline,
+
             size,
+            cam,
+            cam_buf,
+            cam_bind_group,
         }
     }
 
@@ -135,7 +184,8 @@ impl Engine {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_bind_group(0, &self.cam_bind_group, &[]);
+            render_pass.draw(0..6, 0..1);
         }
 
         self.queue.submit(iter::once(encoder.finish()));
@@ -144,12 +194,18 @@ impl Engine {
         Ok(())
     }
 
+    pub fn recover(&mut self) {
+        self.resize(self.size);
+    }
+
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
+
+            self.cam.resize(self.config.width, self.config.height);
         }
     }
 
@@ -157,5 +213,8 @@ impl Engine {
         false
     }
 
-    pub fn update(&mut self) {}
+    pub fn update(&mut self) {
+        self.queue
+            .write_buffer(&self.cam_buf, 0, bytemuck::cast_slice(&[self.cam.uniform]));
+    }
 }

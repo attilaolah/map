@@ -1,3 +1,4 @@
+mod camera;
 mod engine;
 
 use winit::{
@@ -29,7 +30,8 @@ fn main() {
                             input:
                                 KeyboardInput {
                                     state: ElementState::Pressed,
-                                    virtual_keycode: Some(VirtualKeyCode::Escape),
+                                    virtual_keycode:
+                                        Some(VirtualKeyCode::Escape | VirtualKeyCode::Q),
                                     ..
                                 },
                             ..
@@ -50,7 +52,7 @@ fn main() {
                 match engine.render() {
                     Ok(_) => {}
                     // Reconfigure the surface if lost:
-                    Err(wgpu::SurfaceError::Lost) => engine.resize(engine.size),
+                    Err(wgpu::SurfaceError::Lost) => engine.recover(),
                     // The system is out of memory, we should probably quit:
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     // All other errors (Outdated, Timeout) should be resolved by the next frame:
