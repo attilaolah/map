@@ -58,7 +58,7 @@ impl Engine {
 
         // Camera setup:
 
-        let cam = Camera::new(16.0, size.width, size.height);
+        let cam = Camera::new(4.0, size.width, size.height);
 
         let cam_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
@@ -94,7 +94,7 @@ impl Engine {
 
         let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
             label: Some("Triangle Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/triangle.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/square.wgsl").into()),
         });
 
         // Render pipeline setup:
