@@ -1,4 +1,5 @@
 use std::iter;
+use std::time;
 
 use wgpu::util::DeviceExt;
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
@@ -12,10 +13,26 @@ pub struct Engine {
     config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
 
-    pub size: PhysicalSize<u32>,
+    size: PhysicalSize<u32>,
+
     cam: Camera,
     cam_buf: wgpu::Buffer,
-    cam_bind_group: wgpu::BindGroup,
+    cam_dirty: bool,
+
+    created_at: time::Instant,
+    time_buf: wgpu::Buffer,
+
+    uniforms_bind_group: wgpu::BindGroup,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct Time(f32);
+
+impl Time {
+    fn between(earlier: time::Instant, later: time::Instant) -> Self {
+        Self(later.duration_since(earlier).as_secs_f32())
+    }
 }
 
 impl Engine {
@@ -56,6 +73,14 @@ impl Engine {
         };
         surface.configure(&device, &config);
 
+        // Time setup:
+
+        let time_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Time Buffer"),
+            contents: bytemuck::cast_slice(&[Time(0.0)]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
         // Camera setup:
 
         let cam = Camera::new(4.0, size.width, size.height);
@@ -66,28 +91,46 @@ impl Engine {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let cam_bind_group_layout =
+        let uniforms_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                }],
-                label: Some("cam_bind_group_layout"),
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+                label: Some("uniforms_bind_group_layout"),
             });
 
-        let cam_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &cam_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: cam_buf.as_entire_binding(),
-            }],
-            label: Some("cam_bind_group"),
+        let uniforms_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &uniforms_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: time_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: cam_buf.as_entire_binding(),
+                },
+            ],
+            label: Some("uniforms_bind_group"),
         });
 
         // Shader setup:
@@ -102,7 +145,7 @@ impl Engine {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&cam_bind_group_layout],
+                bind_group_layouts: &[&uniforms_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -151,9 +194,15 @@ impl Engine {
             render_pipeline,
 
             size,
+
             cam,
             cam_buf,
-            cam_bind_group,
+            cam_dirty: false,
+
+            created_at: time::Instant::now(),
+            time_buf,
+
+            uniforms_bind_group,
         }
     }
 
@@ -184,7 +233,7 @@ impl Engine {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.cam_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.uniforms_bind_group, &[]);
             render_pass.draw(0..((15 - 2) * 3 + 1), 0..1);
         }
 
@@ -206,6 +255,7 @@ impl Engine {
             self.surface.configure(&self.device, &self.config);
 
             self.cam.resize(self.config.width, self.config.height);
+            self.cam_dirty = true;
         }
     }
 
@@ -215,6 +265,15 @@ impl Engine {
 
     pub fn update(&mut self) {
         self.queue
-            .write_buffer(&self.cam_buf, 0, bytemuck::cast_slice(&[self.cam.uniform]));
+            .write_buffer(&self.time_buf, 0, bytemuck::cast_slice(&[self.lifetime()]));
+        if self.cam_dirty {
+            self.queue
+                .write_buffer(&self.cam_buf, 0, bytemuck::cast_slice(&[self.cam.uniform]));
+            self.cam_dirty = false;
+        }
+    }
+
+    fn lifetime(&self) -> Time {
+        return Time::between(self.created_at, time::Instant::now());
     }
 }

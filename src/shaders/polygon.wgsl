@@ -4,12 +4,20 @@ let PI: f32 = 3.14159265;
 /// Types & Uniforms
 
 [[block]]
+struct Time {
+    secs: f32;
+};
+[[group(0), binding(0)]]
+var<uniform> time: Time;
+
+[[block]]
 struct Camera {
     view_pos: vec4<f32>;
     view_proj: mat4x4<f32>;
 };
-[[group(0), binding(0)]]
+[[group(0), binding(1)]]
 var<uniform> camera: Camera;
+
 
 struct VertexOutput {
     [[builtin(position)]] clip_position: vec4<f32>;
@@ -110,7 +118,7 @@ fn to_uv(xy: vec2<f32>) -> vec2<f32> {
 fn vs_main(
     [[builtin(vertex_index)]] idx: u32,
 ) -> VertexOutput {
-    let xy = reg_poly_xy(15u, poly_strip_i(15u, idx), 0.2);
+    let xy = reg_poly_xy(15u, poly_strip_i(15u, idx), time.secs);
 
     var v: VertexOutput;
     v.uv = to_uv(xy);
