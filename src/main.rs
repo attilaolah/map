@@ -1,5 +1,6 @@
 mod camera;
 mod engine;
+mod goldberg;
 
 use winit::{
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},

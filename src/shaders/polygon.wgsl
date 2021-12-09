@@ -1,5 +1,5 @@
 /// Constants
-let PI: f32 = 3.14159265;
+let PI: f32 = 3.141592653589793;
 
 /// Types & Uniforms
 
@@ -32,7 +32,7 @@ struct VertexOutput {
 // TODO: Figure out whether it is better or worse to use control flow instructions (if, switch, etc.)
 // Then re-write the utilities below to all use if/switch/... or the select/zip_n family of functions.
 
-fn radians(d: f32) -> f32 {
+fn rad(d: f32) -> f32 {
     return d * PI / 180.0;
 }
 
@@ -123,6 +123,36 @@ fn to_vec3(v: vec4<f32>) -> vec3<f32> {
     return vec3<f32>(v.x / v.w, v.y / v.w, v.z / v.w);
 }
 
+fn rot_x(by: f32) -> mat3x3<f32> {
+    let s = sin(by);
+    let c = cos(by);
+    return mat3x3<f32>(
+        vec3<f32>(1.0, 0.0, 0.0),
+        vec3<f32>(0.0, c, s),
+        vec3<f32>(0.0, -s, c),
+    );
+}
+
+fn rot_y(by: f32) -> mat3x3<f32> {
+    let s = sin(by);
+    let c = cos(by);
+    return mat3x3<f32>(
+        vec3<f32>(c, 0.0, -s),
+        vec3<f32>(0.0, 1.0, 0.0),
+        vec3<f32>(s, 0.0, c),
+    );
+}
+
+fn rot_z(by: f32) -> mat3x3<f32> {
+    let s = sin(by);
+    let c = cos(by);
+    return mat3x3<f32>(
+        vec3<f32>(c, s, 0.0),
+        vec3<f32>(-s, c, 0.0),
+        vec3<f32>(0.0, 0.0, 1.0),
+    );
+}
+
 // Lok from `eye` at `dir`, with `up` facing up.
 // https://docs.rs/cgmath/0.18.0/src/cgmath/matrix.rs.html#366-378
 fn look_to(eye: vec3<f32>, dir: vec3<f32>, up: vec3<f32>) -> mat4x4<f32> {
@@ -159,26 +189,126 @@ fn perspective(fovy: f32, aspect: f32, near: f32, far: f32) -> mat4x4<f32> {
 
 fn view_proj() -> mat4x4<f32> {
     return (
+        // OPENGL_TO_WGPU_MATRIX
+        // Doesn't seem to be necessary though.
+        // mat4x4<f32>(
+        //     vec4<f32>(1.0, 0.0, 0.0, 0.0),
+        //     vec4<f32>(0.0, 1.0, 0.0, 0.0),
+        //     vec4<f32>(0.0, 0.0, 0.5, 0.5),
+        //     vec4<f32>(0.0, 0.0, 0.0, 1.0),
+        // ) *
         perspective(cam.fovy, cam.aspect, cam.znear, cam.zfar)
     ) * look_at_o(vec3<f32>(
-        sin(time.secs * PI / 8.0) * 4.0,
-        0.0,
-        cos(time.secs * PI / 8.0) * 4.0,
+        // Rotate around the Y axis.
+        sin(time.secs) * 4.0,
+        2.0, // sin(time.secs / 2.0) * 2.0,
+        cos(time.secs) * 4.0,
     ));
 }
 
 // Vertex Shader
 
+// Triangle:
+let TRI_V: u32 = 3u;  // number of edges / vertices
+
+// Pentagon:
+let PEN_V: u32 = 5u; // number of edges / vertices
+let PEN_T: u32 = 3u; // = PEN_V - 2u; number of triangles
+let PEN_VT: u32 = 9u; // = PEN_T * TRI_V; total number of vertices when triangulated
+
+// Icosahedron:
+let ICO_F: u32 = 20u; // number of faces
+let ICO_E: u32 = 30u; // number of faces
+let ICO_V: u32 = 12u; // number of vertices
+
+// Angle between vertices
+let ICO_AV: f32 = 1.1071487177940904; // = PI / 2.0 - atan(0.5);
+
+// Truncated Icosahedron (Goldberg):
+let TRU_VP: u32 = 108u; // = ICO_V * PEN_VT; total number of vertices of triangulated pentagonal faces
+
+// Pentagon edge scale factor.
+// TODO: Make this a constant!
+fn pentagon_edge() -> f32 {
+    return 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0));
+}
+
+// Edge scale factor after `n` subdivisions.
+fn goldberg_pentagon_edge(n: u32) -> f32 {
+    // TODO: Subdivide further!
+    return select(
+        // Edge of a truncated icosahedron with radius = 1.
+        // https://mathworld.wolfram.com/TruncatedIcosahedron.html
+        4.0 / sqrt(58.0 + 18.0 * sqrt(5.0)),
+        0.0, // a special-case, subdivison 0 un-truncates the icosahedron
+        n == 0u,
+    );
+}
+
+// Inradius at the pentagon face, given the edge length:
+fn goldberg_pentagon_inradius(edge: f32) -> f32 {
+    return sqrt(1.0 - pow(edge / pentagon_edge(), 2.0));
+}
+
+fn goldberg_pentagons(idx: u32) -> VertexOutput {
+    // Pentagon index:
+    let idx_p = idx / PEN_VT;
+    // Intentionally shadow the global index with the local one:
+    let idx = idx % PEN_VT;
+
+    // Pendagon index, modulo XY+XZ plane symmetry.
+    let idx_p2 = idx_p % (ICO_V / 2u);
+
+    let pole = idx_p2 == 0u;
+    let flip = idx_p != idx_p2;
+
+    let s = goldberg_pentagon_edge(1u);
+    let ir = goldberg_pentagon_inradius(s);
+
+    // Draw the pentagon in x/y coords & scale it down.
+    let xy = reg_poly_xy(PEN_V, poly_strip_i(PEN_V, idx),
+        // Faces at the poles should be flipped upside-down:
+        PI / 2.0 * select(1.0, -1.0, pole),
+    ) * s;
+
+    // Move the pentagon to its 3D position, at index 0.
+    // TODO: Figure out why is this z = -y, why not z = y?
+    let v = vec3<f32>(xy.x, ir, -xy.y);
+
+    // [1..5] X-axis rotation:
+    let v = select(rot_x(ICO_AV) * v, v, pole);
+    // [1..5] Y-axis rotation:
+    let v = select(rot_y(
+        // Technically the "-1u" is not necessary.
+        // It makes the pentagon with index 1 face towards the camera.
+        PI / f32(PEN_V) * f32(idx_p - 1u) * 2.0
+    ) * v, v, pole);
+
+    // [6..11] XY+XZ-plane symmetry (flip):
+    let v = select(v, vec3<f32>(v.x, -v.y, -v.z), flip);
+
+    var out: VertexOutput;
+    out.uv = to_uv(v.xy);
+    out.clip_position = view_proj() * vec4<f32>(v, 1.0);
+    return out;
+}
+
+fn goldberg_hexagons(idx: u32) -> VertexOutput {
+    var out: VertexOutput;
+    out.uv = to_uv(vec2<f32>(0.0, 0.0));
+    out.clip_position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    return out;
+}
+
 [[stage(vertex)]]
 fn vs_main(
     [[builtin(vertex_index)]] idx: u32,
 ) -> VertexOutput {
-    let xy = reg_poly_xy(4u, poly_strip_i(4u, idx), time.secs * 2.0);
-
-    var v: VertexOutput;
-    v.uv = to_uv(xy);
-    v.clip_position = view_proj() * vec4<f32>(xy, 0.0, 1.0);
-    return v;
+    if (idx < TRU_VP) {
+        return goldberg_pentagons(idx);
+    } else {
+        return goldberg_hexagons(idx - TRU_VP);
+    }
 }
 
 // Fragment Shader

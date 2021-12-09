@@ -5,6 +5,7 @@ use wgpu::util::DeviceExt;
 use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
 
 use crate::camera::Camera;
+use crate::goldberg;
 
 pub struct Engine {
     surface: wgpu::Surface,
@@ -234,7 +235,8 @@ impl Engine {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniforms_bind_group, &[]);
-            render_pass.draw(0..((4 - 2) * 3 + 1), 0..1);
+
+            render_pass.draw(0..(goldberg::total_vertices(1) + 1), 0..1);
         }
 
         self.queue.submit(iter::once(encoder.finish()));
