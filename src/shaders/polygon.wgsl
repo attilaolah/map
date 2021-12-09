@@ -1,15 +1,6 @@
 /// Constants
 let PI: f32 = 3.14159265;
 
-// TODO: Update perspective() to not require this!
-//let OPENGL_TO_WGPU: mat4x4<f32> = mat4x4<f32>(
-//    vec4<f32>(1.0, 0.0, 0.0, 0.0),
-//    vec4<f32>(0.0, 1.0, 0.0, 0.0),
-//    vec4<f32>(0.0, 0.0, 0.5, 0.5),
-//    vec4<f32>(0.0, 0.0, 0.0, 1.0),
-//);
-
-
 /// Types & Uniforms
 
 [[block]]
@@ -21,11 +12,14 @@ var<uniform> time: Time;
 
 [[block]]
 struct Camera {
-    view_pos: vec4<f32>;
-    view_proj: mat4x4<f32>;
+    pos: vec3<f32>;
+    aspect: f32;
+    fovy: f32;
+    znear: f32;
+    zfar: f32;
 };
 [[group(0), binding(1)]]
-var<uniform> camera: Camera;
+var<uniform> cam: Camera;
 
 
 struct VertexOutput {
@@ -154,7 +148,7 @@ fn look_at_o(eye: vec3<f32>) -> mat4x4<f32> {
 
 fn perspective(fovy: f32, aspect: f32, near: f32, far: f32) -> mat4x4<f32> {
     let d = near - far;
-    let f = 1.0 / tan(radians(fovy) / 2.0);
+    let f = 1.0 / tan(fovy / 2.0);
     return mat4x4<f32>(
         vec4<f32>(f / aspect, 0.0, 0.0, 0.0),
         vec4<f32>(0.0, f, 0.0, 0.0),
@@ -165,8 +159,7 @@ fn perspective(fovy: f32, aspect: f32, near: f32, far: f32) -> mat4x4<f32> {
 
 fn view_proj() -> mat4x4<f32> {
     return (
-        // OPENGL_TO_WGPU *
-        perspective(35.0, 1.333333, 0.0001, 1000.0)
+        perspective(cam.fovy, cam.aspect, cam.znear, cam.zfar)
     ) * look_at_o(vec3<f32>(
         sin(time.secs * PI / 8.0) * 4.0,
         0.0,

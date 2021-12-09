@@ -87,7 +87,7 @@ impl Engine {
 
         let cam_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[cam.uniform]),
+            contents: bytemuck::cast_slice(&[cam]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -268,7 +268,7 @@ impl Engine {
             .write_buffer(&self.time_buf, 0, bytemuck::cast_slice(&[self.lifetime()]));
         if self.cam_dirty {
             self.queue
-                .write_buffer(&self.cam_buf, 0, bytemuck::cast_slice(&[self.cam.uniform]));
+                .write_buffer(&self.cam_buf, 0, bytemuck::cast_slice(&[self.cam]));
             self.cam_dirty = false;
         }
     }
