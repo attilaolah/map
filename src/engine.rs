@@ -234,7 +234,7 @@ impl Engine {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniforms_bind_group, &[]);
-            render_pass.draw(0..((15 - 2) * 3 + 1), 0..1);
+            render_pass.draw(0..((4 - 2) * 3 + 1), 0..1);
         }
 
         self.queue.submit(iter::once(encoder.finish()));
