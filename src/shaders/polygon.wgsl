@@ -1,5 +1,6 @@
 /// Constants
 let PI: f32 = 3.141592653589793;
+let TAU: f32 = 6.283185307179586;  // = PI * 2.0;
 
 /// Types & Uniforms
 
@@ -36,6 +37,16 @@ fn rad(d: f32) -> f32 {
     return d * PI / 180.0;
 }
 
+// Convert from spherical to cartesian coortinates.
+// `theta` is away from the +Y axis, `phi` is away from the +Z axis (probably).
+fn cart(phi: f32, theta: f32) -> vec3<f32> {
+    return vec3<f32>(
+        sin(phi) * sin(theta),
+        cos(theta),
+        cos(phi) * sin(theta),
+    );
+}
+
 // Checks if `i` is even.
 fn is_even(i: u32) -> bool {
     return (i & 1u) == 0u;
@@ -63,14 +74,14 @@ fn zip_3(mod_0: u32, mod_1: u32, mod_2: u32, i: u32) -> u32 {
 
 // XY coordinates of a regular `n`-gon rotated by `a`, at index `i`.
 fn reg_poly_xy(n: u32, i: u32, a: f32) -> vec2<f32> {
-    let b = ((PI * 2.0) / f32(n)) * f32(i) + a;
+    let b = (TAU / f32(n)) * f32(i) + a;
     return vec2<f32>(cos(b), sin(b));
 }
 
 // Index for fan-triangulating a convex `n`-gon at `i`.
 fn fan_i(i: u32) -> u32 {
     let m = i % 3u;
-    return 
+    return
       // [0, 0, 0, 1, 1, 1, 2, 2, 2, ..]
       (i / 3u) *
       // [0, 1, 1, 0, 1, 1, 0, 1, 1, ..]
@@ -200,80 +211,65 @@ fn view_proj() -> mat4x4<f32> {
         perspective(cam.fovy, cam.aspect, cam.znear, cam.zfar)
     ) * look_at_o(vec3<f32>(
         // Rotate around the Y axis.
-        sin(time.secs) * 4.0,
+        sin(time.secs / 8.0) * 4.0,
         2.0, // sin(time.secs / 2.0) * 2.0,
-        cos(time.secs) * 4.0,
+        cos(time.secs / 8.0) * 4.0,
     ));
 }
-
-// Vertex Shader
 
 // Triangle:
 let TRI_V: u32 = 3u;  // number of edges / vertices
 
 // Pentagon:
+// https://mathworld.wolfram.com/RegularPentagon.html
 let PEN_V: u32 = 5u; // number of edges / vertices
 let PEN_T: u32 = 3u; // = PEN_V - 2u; number of triangles
 let PEN_VT: u32 = 9u; // = PEN_T * TRI_V; total number of vertices when triangulated
+// Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
+let PEN_ES: f32 = 1.1755705045849463; // = 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0));
+
+// Hexagon:
+// https://mathworld.wolfram.com/RegularHexagon.html
+let HEX_V: u32 = 6u; // number of edges / vertices
+let HEX_T: u32 = 4u; // = HEX_V - 2u; number of triangles
+let HEX_VT: u32 = 12u; // = HEX_T * TRI_V; total number of vertices when triangulated
 
 // Icosahedron:
 let ICO_F: u32 = 20u; // number of faces
 let ICO_E: u32 = 30u; // number of faces
 let ICO_V: u32 = 12u; // number of vertices
-
-// Angle between vertices
+// Smallest angle between any two vertex vectors.
 let ICO_AV: f32 = 1.1071487177940904; // = PI / 2.0 - atan(0.5);
 
 // Truncated Icosahedron (Goldberg):
+// https://mathworld.wolfram.com/TruncatedIcosahedron.html
 let TRU_VP: u32 = 108u; // = ICO_V * PEN_VT; total number of vertices of triangulated pentagonal faces
-
-// Pentagon edge scale factor.
-// TODO: Make this a constant!
-fn pentagon_edge() -> f32 {
-    return 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0));
-}
-
-// Edge scale factor after `n` subdivisions.
-fn goldberg_pentagon_edge(n: u32) -> f32 {
-    // TODO: Subdivide further!
-    return select(
-        // Edge of a truncated icosahedron with radius = 1.
-        // https://mathworld.wolfram.com/TruncatedIcosahedron.html
-        4.0 / sqrt(58.0 + 18.0 * sqrt(5.0)),
-        0.0, // a special-case, subdivison 0 un-truncates the icosahedron
-        n == 0u,
-    );
-}
-
-// Inradius at the pentagon face, given the edge length:
-fn goldberg_pentagon_inradius(edge: f32) -> f32 {
-    return sqrt(1.0 - pow(edge / pentagon_edge(), 2.0));
-}
+// Edge scale factor, i.e. the edge of a truncated icosahedron with circumradius = 1.
+let TRU_ES: f32 = 0.40354821233519766; // = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0))
+// Latitudes of vertices:
+let TRU_LAT_0: f32 = 0.35040541284731597; // = asin(TRU_ES / PEN_ES);
+let TRU_LAT_1: f32 = 0.75674330494677440; // = ICO_AV - TRU_LAT_0;
+let TRU_LAT_2: f32 = 1.02932537965617590; // TODO: Just an estimate for now.
+let TRU_LAT_3: f32 = 1.39830543682029700; // TODO: Just an estimate for now.
+let TRU_LAT_4: f32 = 1.74328721676949620; // TODO: Just an estimate for now.
 
 fn goldberg_pentagons(idx: u32) -> VertexOutput {
-    // Pentagon index:
-    let idx_p = idx / PEN_VT;
+    // "Instance" ID:
+    let ins = idx / PEN_VT;
+    // Index modulo XY+XZ plane symmetry.
+    let ins_2 = ins % (ICO_V / 2u);
     // Intentionally shadow the global index with the local one:
     let idx = idx % PEN_VT;
 
-    // Pendagon index, modulo XY+XZ plane symmetry.
-    let idx_p2 = idx_p % (ICO_V / 2u);
+    let pole = ins_2 == 0u;
+    let flip = ins != ins_2;
 
-    let pole = idx_p2 == 0u;
-    let flip = idx_p != idx_p2;
+    let idv = poly_strip_i(PEN_V, idx);
 
-    let s = goldberg_pentagon_edge(1u);
-    let ir = goldberg_pentagon_inradius(s);
-
-    // Draw the pentagon in x/y coords & scale it down.
-    let xy = reg_poly_xy(PEN_V, poly_strip_i(PEN_V, idx),
-        // Faces at the poles should be flipped upside-down:
-        PI / 2.0 * select(1.0, -1.0, pole),
-    ) * s;
-
-    // Move the pentagon to its 3D position, at index 0.
-    // TODO: Figure out why is this z = -y, why not z = y?
-    let v = vec3<f32>(xy.x, ir, -xy.y);
+    let v = cart(
+        TAU / 5.0 * f32(idv) + select(PI / 5.0, 0.0, pole),
+        TRU_LAT_0 * (abs(cos(time.secs)) * 0.5 + 0.5),
+    );
 
     // [1..5] X-axis rotation:
     let v = select(rot_x(ICO_AV) * v, v, pole);
@@ -281,7 +277,7 @@ fn goldberg_pentagons(idx: u32) -> VertexOutput {
     let v = select(rot_y(
         // Technically the "-1u" is not necessary.
         // It makes the pentagon with index 1 face towards the camera.
-        PI / f32(PEN_V) * f32(idx_p - 1u) * 2.0
+        PI / f32(PEN_V) * f32(ins - 1u) * 2.0
     ) * v, v, pole);
 
     // [6..11] XY+XZ-plane symmetry (flip):
@@ -294,11 +290,69 @@ fn goldberg_pentagons(idx: u32) -> VertexOutput {
 }
 
 fn goldberg_hexagons(idx: u32) -> VertexOutput {
+    // "Instance" ID:
+    let ins = idx / HEX_VT;
+    // Index modulo XY+XZ plane symmetry.
+    let ins_2 = ins % 10u;
+    // Index within a single ring of hexagons
+    let ins_r = ins % 5u;
+    // Intentionally shadow the global index with the local one:
+    let idx = idx % HEX_VT;
+
+    // TODO: debug!
+    if (ins >= 6u) { var v: VertexOutput; v.uv = vec2<f32>(0.0, 0.0); v.clip_position = vec4<f32>(0.0, 0.0, 0.0, 1.0); return v; }
+
+    let flip = ins > 10u;
+
+    // Find the vertex index for the current vertex:
+    let idv = poly_strip_i(HEX_V, idx);
+    // Select the "row" based on the index.
+    // Drawing the hexagon as it would be drawn in 2D, start from the right, go counter-clockwise.
+    // [0, 0, 0, 2, 2, 2, ..]
+    let row_12 = (idv / 3u) * 2u;
+    // [1, 0, 0, 1, 2, 2, ..]
+    let row = zip_3(1u, row_12, row_12, idv);
+
+    // Start counting from twice the rowindex.
+    // Ring 0 rows are [0, 1, 2], ring 1 rows are [2, 3, 4].
+    //let row = ins_r * 2u + row;
+
+    // ROWS:
+    var lat = 0.0;
+    switch (row) {
+        case 0u: { lat = TRU_LAT_0; }
+        case 1u: { lat = TRU_LAT_1; }
+        case 2u: { lat = TRU_LAT_2; }
+        case 3u: { lat = TRU_LAT_3; }
+        default: { lat = TRU_LAT_4; }
+    }
+
+    // TODO: [3, 3, 0, 0, 1, 2]
+
+    var lon = TAU * f32(ins_r) / 5.0;
+    // TODO!
+    switch (idv) {
+        case 0u: { lon = lon + 0.0; }
+        case 1u: { lon = lon + 0.0; }
+        case 2u: { lon = lon - PI * 0.4; }
+        case 3u: { lon = lon - PI * 0.4; }
+        case 4u: { lon = lon - PI * 0.4 + 0.2; } // TODO!
+        default: { lon = lon - 0.2; } // TODO!
+    }
+
+    // Draw the hexagon in x/y coords.
+    let v = cart(lon, lat);
+
+    // [6..11] XY+XZ-plane symmetry (flip):
+    let v = select(v, vec3<f32>(v.x, -v.y, -v.z), flip);
+
     var out: VertexOutput;
-    out.uv = to_uv(vec2<f32>(0.0, 0.0));
-    out.clip_position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    out.uv = to_uv(v.xy);
+    out.clip_position = view_proj() * vec4<f32>(v, 1.0);
     return out;
 }
+
+// The Vertex Shader
 
 [[stage(vertex)]]
 fn vs_main(
@@ -311,7 +365,7 @@ fn vs_main(
     }
 }
 
-// Fragment Shader
+// The Fragment Shader
 
 [[stage(fragment)]]
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
