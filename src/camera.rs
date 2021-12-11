@@ -8,6 +8,7 @@ pub struct Camera {
     fovy: f32, // in radians
     znear: f32,
     zfar: f32,
+    _pad: u32,
 }
 
 impl Camera {
@@ -19,6 +20,7 @@ impl Camera {
             fovy: fovy.0,
             znear: 0.0001,
             zfar: 1000.0,
+            _pad: 0,
         }
     }
 

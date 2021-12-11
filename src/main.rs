@@ -31,19 +31,11 @@ fn main() {
                             input:
                                 KeyboardInput {
                                     state: ElementState::Pressed,
-                                    virtual_keycode:
-                                        Some(VirtualKeyCode::Escape | VirtualKeyCode::Q),
+                                    virtual_keycode: Some(VirtualKeyCode::Escape),
                                     ..
                                 },
                             ..
                         } => *control_flow = ControlFlow::Exit,
-                        WindowEvent::Resized(physical_size) => {
-                            engine.resize(*physical_size);
-                        }
-                        WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                            // `new_inner_size` is &mut so we have to dereference it twice:
-                            engine.resize(**new_inner_size);
-                        }
                         _ => {}
                     }
                 }

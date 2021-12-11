@@ -2,10 +2,14 @@ use std::iter;
 use std::time;
 
 use wgpu::util::DeviceExt;
-use winit::{dpi::PhysicalSize, event::WindowEvent, window::Window};
+use winit::{
+    dpi::PhysicalSize,
+    event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent},
+    window::Window,
+};
 
 use crate::camera::Camera;
-use crate::goldberg;
+use crate::goldberg::Goldberg;
 
 pub struct Engine {
     surface: wgpu::Surface,
@@ -22,6 +26,8 @@ pub struct Engine {
 
     created_at: time::Instant,
     time_buf: wgpu::Buffer,
+
+    goldberg: Goldberg,
 
     uniforms_bind_group: wgpu::BindGroup,
 }
@@ -92,6 +98,10 @@ impl Engine {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
+        // Goldberg polyhedron setup:
+
+        let goldberg = Goldberg::new(&device, config.format);
+
         let uniforms_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[
@@ -115,6 +125,8 @@ impl Engine {
                         },
                         count: None,
                     },
+                    Goldberg::bind_group_layout_entry(2),
+                    Goldberg::bind_group_layout_entry(3),
                 ],
                 label: Some("uniforms_bind_group_layout"),
             });
@@ -130,15 +142,10 @@ impl Engine {
                     binding: 1,
                     resource: cam_buf.as_entire_binding(),
                 },
+                goldberg.uniform_bind_group_entry(2),
+                goldberg.static_data_bind_group_entry(3),
             ],
             label: Some("uniforms_bind_group"),
-        });
-
-        // Shader setup:
-
-        let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("Triangle Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/polygon.wgsl").into()),
         });
 
         // Render pipeline setup:
@@ -153,32 +160,9 @@ impl Engine {
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "vs_main",
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: "fs_main",
-                targets: &[wgpu::ColorTargetState {
-                    format: config.format,
-                    blend: Some(wgpu::BlendState {
-                        color: wgpu::BlendComponent::REPLACE,
-                        alpha: wgpu::BlendComponent::REPLACE,
-                    }),
-                    write_mask: wgpu::ColorWrites::ALL,
-                }],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                polygon_mode: wgpu::PolygonMode::Fill,
-                clamp_depth: false,
-                conservative: false,
-            },
+            vertex: goldberg.vertex_state(),
+            fragment: goldberg.fragment_state(),
+            primitive: Goldberg::primitive_state(),
             depth_stencil: None,
             multisample: wgpu::MultisampleState {
                 count: 1,
@@ -202,6 +186,8 @@ impl Engine {
 
             created_at: time::Instant::now(),
             time_buf,
+
+            goldberg,
 
             uniforms_bind_group,
         }
@@ -236,7 +222,7 @@ impl Engine {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniforms_bind_group, &[]);
 
-            render_pass.draw(0..(goldberg::total_vertices(1) + 1), 0..1);
+            self.goldberg.draw_to(&mut render_pass);
         }
 
         self.queue.submit(iter::once(encoder.finish()));
@@ -261,8 +247,43 @@ impl Engine {
         }
     }
 
-    pub fn input(&mut self, _event: &WindowEvent) -> bool {
-        false
+    pub fn input(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::Resized(physical_size) => {
+                self.resize(*physical_size);
+                true
+            }
+            WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                // `new_inner_size` is &mut so we have to dereference it twice:
+                self.resize(**new_inner_size);
+                true
+            }
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(VirtualKeyCode::Plus),
+                        ..
+                    },
+                ..
+            } => {
+                self.goldberg.zoom_in();
+                true
+            }
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(VirtualKeyCode::Minus),
+                        ..
+                    },
+                ..
+            } => {
+                self.goldberg.zoom_out();
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn update(&mut self) {
@@ -273,6 +294,7 @@ impl Engine {
                 .write_buffer(&self.cam_buf, 0, bytemuck::cast_slice(&[self.cam]));
             self.cam_dirty = false;
         }
+        self.goldberg.queue_update_if_needed(&self.queue, 0);
     }
 
     fn lifetime(&self) -> Time {

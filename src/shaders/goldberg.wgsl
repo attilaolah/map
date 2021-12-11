@@ -18,9 +18,26 @@ struct Camera {
     fovy: f32;
     znear: f32;
     zfar: f32;
+    pad: u32;
 };
 [[group(0), binding(1)]]
 var<uniform> cam: Camera;
+
+[[block]]
+struct Goldberg {
+    subdiv: u32;
+    pad: array<u32, 3>;
+};
+[[group(0), binding(2)]]
+var<uniform> goldberg: Goldberg;
+
+[[block]]
+struct GoldbergStatic {
+    transform_pen: array<mat4x4<f32>, 12>;
+    transform_hex: array<mat4x4<f32>, 20>;
+};
+[[group(0), binding(3)]]
+var<uniform> goldberg_static: GoldbergStatic;
 
 
 struct VertexOutput {
@@ -249,106 +266,36 @@ let TRU_ES: f32 = 0.40354821233519766; // = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0))
 // Latitudes of vertices:
 let TRU_LAT_0: f32 = 0.35040541284731597; // = asin(TRU_ES / PEN_ES);
 let TRU_LAT_1: f32 = 0.75674330494677440; // = ICO_AV - TRU_LAT_0;
-let TRU_LAT_2: f32 = 1.02932537965617590; // TODO: Just an estimate for now.
-let TRU_LAT_3: f32 = 1.39830543682029700; // TODO: Just an estimate for now.
-let TRU_LAT_4: f32 = 1.74328721676949620; // TODO: Just an estimate for now.
 
-fn goldberg_pentagons(idx: u32) -> VertexOutput {
-    // "Instance" ID:
-    let ins = idx / PEN_VT;
-    // Index modulo XY+XZ plane symmetry.
-    let ins_2 = ins % (ICO_V / 2u);
-    // Intentionally shadow the global index with the local one:
-    let idx = idx % PEN_VT;
+// Generate a single pentagonal face.
+fn goldberg_pentagon(idx: u32) -> vec4<f32> {
+    return vec4<f32>(cart(
+        TAU / 5.0 * f32(poly_strip_i(PEN_V, idx)),
+        TRU_LAT_0 * select(pow(0.5, f32(goldberg.subdiv - 1u)), 0.0, goldberg.subdiv == 0u),
+    ), 1.0);
+}
 
-    let pole = ins_2 == 0u;
-    let flip = ins != ins_2;
-
-    let idv = poly_strip_i(PEN_V, idx);
-
-    let v = cart(
-        TAU / 5.0 * f32(idv) + select(PI / 5.0, 0.0, pole),
-        TRU_LAT_0 * (abs(cos(time.secs)) * 0.5 + 0.5),
-    );
-
-    // [1..5] X-axis rotation:
-    let v = select(rot_x(ICO_AV) * v, v, pole);
-    // [1..5] Y-axis rotation:
-    let v = select(rot_y(
-        // Technically the "-1u" is not necessary.
-        // It makes the pentagon with index 1 face towards the camera.
-        PI / f32(PEN_V) * f32(ins - 1u) * 2.0
-    ) * v, v, pole);
-
-    // [6..11] XY+XZ-plane symmetry (flip):
-    let v = select(v, vec3<f32>(v.x, -v.y, -v.z), flip);
-
+fn goldberg_pentagons(ins: u32, idx: u32) -> VertexOutput {
+    let v = goldberg_static.transform_pen[ins] * goldberg_pentagon(idx);
     var out: VertexOutput;
-    out.uv = to_uv(v.xy);
-    out.clip_position = view_proj() * vec4<f32>(v, 1.0);
+    out.uv = to_uv(vec2<f32>(sin(f32(ins)), cos(f32(ins))));
+    out.clip_position = view_proj() * v;
     return out;
 }
 
-fn goldberg_hexagons(idx: u32) -> VertexOutput {
-    // "Instance" ID:
-    let ins = idx / HEX_VT;
-    // Index modulo XY+XZ plane symmetry.
-    let ins_2 = ins % 10u;
-    // Index within a single ring of hexagons
-    let ins_r = ins % 5u;
-    // Intentionally shadow the global index with the local one:
-    let idx = idx % HEX_VT;
+// Generate a single hexagonal face.
+fn goldberg_hexagon(idx: u32) -> vec4<f32> {
+    return vec4<f32>(cart(
+        TAU / 6.0 * f32(poly_strip_i(HEX_V, idx)),
+        TRU_LAT_0 * select(pow(0.5, f32(goldberg.subdiv - 1u)), 0.0, goldberg.subdiv == 0u),
+    ), 1.0);
+}
 
-    // TODO: debug!
-    if (ins >= 6u) { var v: VertexOutput; v.uv = vec2<f32>(0.0, 0.0); v.clip_position = vec4<f32>(0.0, 0.0, 0.0, 1.0); return v; }
-
-    let flip = ins > 10u;
-
-    // Find the vertex index for the current vertex:
-    let idv = poly_strip_i(HEX_V, idx);
-    // Select the "row" based on the index.
-    // Drawing the hexagon as it would be drawn in 2D, start from the right, go counter-clockwise.
-    // [0, 0, 0, 2, 2, 2, ..]
-    let row_12 = (idv / 3u) * 2u;
-    // [1, 0, 0, 1, 2, 2, ..]
-    let row = zip_3(1u, row_12, row_12, idv);
-
-    // Start counting from twice the rowindex.
-    // Ring 0 rows are [0, 1, 2], ring 1 rows are [2, 3, 4].
-    //let row = ins_r * 2u + row;
-
-    // ROWS:
-    var lat = 0.0;
-    switch (row) {
-        case 0u: { lat = TRU_LAT_0; }
-        case 1u: { lat = TRU_LAT_1; }
-        case 2u: { lat = TRU_LAT_2; }
-        case 3u: { lat = TRU_LAT_3; }
-        default: { lat = TRU_LAT_4; }
-    }
-
-    // TODO: [3, 3, 0, 0, 1, 2]
-
-    var lon = TAU * f32(ins_r) / 5.0;
-    // TODO!
-    switch (idv) {
-        case 0u: { lon = lon + 0.0; }
-        case 1u: { lon = lon + 0.0; }
-        case 2u: { lon = lon - PI * 0.4; }
-        case 3u: { lon = lon - PI * 0.4; }
-        case 4u: { lon = lon - PI * 0.4 + 0.2; } // TODO!
-        default: { lon = lon - 0.2; } // TODO!
-    }
-
-    // Draw the hexagon in x/y coords.
-    let v = cart(lon, lat);
-
-    // [6..11] XY+XZ-plane symmetry (flip):
-    let v = select(v, vec3<f32>(v.x, -v.y, -v.z), flip);
-
+fn goldberg_hexagons(ins: u32, idx: u32) -> VertexOutput {
+    var v = goldberg_static.transform_hex[ins] * goldberg_hexagon(idx);
     var out: VertexOutput;
-    out.uv = to_uv(v.xy);
-    out.clip_position = view_proj() * vec4<f32>(v, 1.0);
+    out.uv = to_uv(vec2<f32>(sin(f32(ins)), cos(f32(ins))));
+    out.clip_position = view_proj() * v;
     return out;
 }
 
@@ -357,11 +304,12 @@ fn goldberg_hexagons(idx: u32) -> VertexOutput {
 [[stage(vertex)]]
 fn vs_main(
     [[builtin(vertex_index)]] idx: u32,
+    [[builtin(instance_index)]] ins: u32,
 ) -> VertexOutput {
-    if (idx < TRU_VP) {
-        return goldberg_pentagons(idx);
+    if (ins >= 12u) {
+        return goldberg_hexagons(ins - 12u, idx);
     } else {
-        return goldberg_hexagons(idx - TRU_VP);
+        return goldberg_pentagons(ins, idx);
     }
 }
 
