@@ -228,9 +228,9 @@ fn view_proj() -> mat4x4<f32> {
         perspective(cam.fovy, cam.aspect, cam.znear, cam.zfar)
     ) * look_at_o(vec3<f32>(
         // Rotate around the Y axis.
-        sin(time.secs / 8.0) * 4.0,
+        sin(time.secs / 2.0) * 4.0,
         2.0, // sin(time.secs / 2.0) * 2.0,
-        cos(time.secs / 8.0) * 4.0,
+        cos(time.secs / 2.0) * 4.0,
     ));
 }
 
@@ -244,12 +244,19 @@ let PEN_T: u32 = 3u; // = PEN_V - 2u; number of triangles
 let PEN_VT: u32 = 9u; // = PEN_T * TRI_V; total number of vertices when triangulated
 // Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
 let PEN_ES: f32 = 1.1755705045849463; // = 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0));
+// Angle from Goldberg origin between Pentagon origin and vertices:
+let PEN_A: f32 = 0.35040541284731597; // = asin(TRU_ES / PEN_ES);
 
 // Hexagon:
 // https://mathworld.wolfram.com/RegularHexagon.html
 let HEX_V: u32 = 6u; // number of edges / vertices
 let HEX_T: u32 = 4u; // = HEX_V - 2u; number of triangles
 let HEX_VT: u32 = 12u; // = HEX_T * TRI_V; total number of vertices when triangulated
+// Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
+let PEN_ES: f32 = 1.0;
+// Angle from Goldberg origin between Pentagon origin and vertices:
+let HEX_A: f32 = 0.415391548984; // asin(TRU_ES / HEX_ES);
+
 
 // Icosahedron:
 let ICO_F: u32 = 20u; // number of faces
@@ -263,15 +270,12 @@ let ICO_AV: f32 = 1.1071487177940904; // = PI / 2.0 - atan(0.5);
 let TRU_VP: u32 = 108u; // = ICO_V * PEN_VT; total number of vertices of triangulated pentagonal faces
 // Edge scale factor, i.e. the edge of a truncated icosahedron with circumradius = 1.
 let TRU_ES: f32 = 0.40354821233519766; // = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0))
-// Latitudes of vertices:
-let TRU_LAT_0: f32 = 0.35040541284731597; // = asin(TRU_ES / PEN_ES);
-let TRU_LAT_1: f32 = 0.75674330494677440; // = ICO_AV - TRU_LAT_0;
 
 // Generate a single pentagonal face.
 fn goldberg_pentagon(idx: u32) -> vec4<f32> {
     return vec4<f32>(cart(
         TAU / 5.0 * f32(poly_strip_i(PEN_V, idx)),
-        TRU_LAT_0 * select(pow(0.5, f32(goldberg.subdiv - 1u)), 0.0, goldberg.subdiv == 0u),
+        PEN_A * select(pow(0.5, f32(goldberg.subdiv - 1u)), 0.0, goldberg.subdiv == 0u),
     ), 1.0);
 }
 
@@ -285,9 +289,12 @@ fn goldberg_pentagons(ins: u32, idx: u32) -> VertexOutput {
 
 // Generate a single hexagonal face.
 fn goldberg_hexagon(idx: u32) -> vec4<f32> {
+    if (goldberg.subdiv == 0u) {
+        // TODO: Special-case, draw a triangle instead.
+    }
     return vec4<f32>(cart(
         TAU / 6.0 * f32(poly_strip_i(HEX_V, idx)),
-        TRU_LAT_0 * select(pow(0.5, f32(goldberg.subdiv - 1u)), 0.0, goldberg.subdiv == 0u),
+        HEX_A * pow(0.5, f32(goldberg.subdiv - 1u)),
     ), 1.0);
 }
 
@@ -306,10 +313,10 @@ fn vs_main(
     [[builtin(vertex_index)]] idx: u32,
     [[builtin(instance_index)]] ins: u32,
 ) -> VertexOutput {
-    if (ins >= 12u) {
-        return goldberg_hexagons(ins - 12u, idx);
-    } else {
+    if (ins < 12u) {
         return goldberg_pentagons(ins, idx);
+    } else {
+        return goldberg_hexagons(ins - 12u, idx);
     }
 }
 
