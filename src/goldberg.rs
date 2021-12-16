@@ -28,8 +28,7 @@ impl Pentagon {
         self.r * 10.0 / (50.0 + 10.0 * 5f32.sqrt()).sqrt()
     }
     fn inscribed_radius(&self) -> f32 {
-        //((50.0 + 10 * 5f32.sqrt())* (25.0 + 10.0 * 5f32.sqrt())).sqrt()
-        self.edge() * (25.0 + 10.0 * 5f32.sqrt()).sqrt() / 10.0
+        self.r * (1.0 + 5f32.sqrt()) / 4.0
     }
 
     fn num_vertices() -> u32 {
