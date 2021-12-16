@@ -3,32 +3,31 @@ use std::ops::Range;
 use cgmath::{Angle, Matrix4, Rad};
 use wgpu::util::DeviceExt;
 
-// Regular triangle.
-struct Triangle {}
+/// A regular triangle.
+struct Triangle();
+
 impl Triangle {
     fn num_vertices() -> u32 {
         3
     }
 }
 
-struct Pentagon {
-    r: f32,
-}
+/// A regular pentagon defined by the radius of the circumscribed circle.
+struct Pentagon(f32);
+
 impl Pentagon {
     fn new(r: f32) -> Self {
-        Self { r }
+        Self(r)
     }
     fn with_edge(e: f32) -> Self {
-        Self {
-            r: e / Self::new(1.0).edge(),
-        }
+        Self::new(e / Self::new(1.0).edge())
     }
 
     fn edge(&self) -> f32 {
-        self.r * 10.0 / (50.0 + 10.0 * 5f32.sqrt()).sqrt()
+        self.0 * 10.0 / (50.0 + 10.0 * 5f32.sqrt()).sqrt()
     }
     fn inscribed_radius(&self) -> f32 {
-        self.r * (1.0 + 5f32.sqrt()) / 4.0
+        self.0 * (1.0 + 5f32.sqrt()) / 4.0
     }
 
     fn num_vertices() -> u32 {
@@ -42,24 +41,22 @@ impl Pentagon {
     }
 }
 
-struct Hexagon {
-    r: f32,
-}
+/// A regular hexagon defined by the radius of the circumscribed circle.
+struct Hexagon(f32);
+
 impl Hexagon {
     fn new(r: f32) -> Self {
-        Self { r }
+        Self(r)
     }
     fn with_edge(e: f32) -> Self {
-        Self {
-            r: e / Self::new(1.0).edge(),
-        }
+        Self::new(e / Self::new(1.0).edge())
     }
 
     fn edge(&self) -> f32 {
-        self.r
+        self.0
     }
     fn inscribed_radius(&self) -> f32 {
-        self.r * 3f32.sqrt() / 2.0
+        self.0 * 3f32.sqrt() / 2.0
     }
 
     fn num_vertices() -> u32 {
@@ -73,8 +70,8 @@ impl Hexagon {
     }
 }
 
-// Icosahedron:
-struct Icosahedron {}
+/// An icosahedron.
+struct Icosahedron();
 
 impl Icosahedron {
     fn num_vertices() -> u32 {
@@ -82,16 +79,16 @@ impl Icosahedron {
     }
 }
 
-struct TruncatedIcosahedron {
-    r: f32,
-}
+/// A truncated icosahedron defined by the radius of the circumscribed sphere.
+struct TruncatedIcosahedron(f32);
+
 impl TruncatedIcosahedron {
     fn new(r: f32) -> Self {
-        Self { r }
+        Self(r)
     }
 
     fn edge(&self) -> f32 {
-        self.r * 4.0 / (58.0 + 18.0 * 5f32.sqrt()).sqrt()
+        self.0 * 4.0 / (58.0 + 18.0 * 5f32.sqrt()).sqrt()
     }
 
     /// Distance between the origin and the midpoint of an edge.
@@ -136,6 +133,7 @@ impl TruncatedIcosahedron {
     }
 }
 
+/// A Goldberg polyhedron.
 pub struct Goldberg {
     uniform: Uniform,
 
