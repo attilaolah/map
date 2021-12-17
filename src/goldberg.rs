@@ -70,7 +70,7 @@ impl Hexagon {
     }
 }
 
-/// An icosahedron.
+/// A regular icosahedron.
 struct Icosahedron();
 
 impl Icosahedron {
@@ -297,7 +297,12 @@ impl Goldberg {
 
     fn hex_vertices(&self) -> Range<u32> {
         if self.uniform.subdiv <= 1 {
+            // Draw a single hexagonal face.
             return 0..Hexagon::tri_vertices() + 1;
+        }
+        if self.uniform.subdiv == 2 {
+            // Draw seven hexagonal faces: one middle one and a ring around it.
+            return 0..(Hexagon::tri_vertices() * 7) + 1;
         }
         0..Hexagon::tri_vertices() + 1 // todo!()
     }
@@ -312,7 +317,7 @@ impl Goldberg {
     }
 
     fn pen_transform(i: u32) -> [[f32; 4]; 4] {
-        let mut m = Matrix4::from_angle_y(Rad(0.0));
+        let mut m = Matrix4::from_angle_x(Rad::turn_div_2() * ((i / 6) as f32));
 
         // Order of operations is right-to-left when multiplying.
         if i % 6 != 0 {
@@ -323,30 +328,25 @@ impl Goldberg {
                 * Matrix4::from_angle_y(Rad::turn_div_2() / 5.0)
                 * m;
         }
-        if i >= 6 {
-            m = Matrix4::from_angle_x(Rad::turn_div_2()) * m;
-        }
 
         m.into()
     }
 
-    // TODO: Implement the rest of the transforms!
     fn hex_transform(i: u32) -> [[f32; 4]; 4] {
         // Order of operations is right-to-left when multiplying.
-        let mut m = Matrix4::from_angle_y(Rad::full_turn() * (i as f32 / 5.0 + 0.1))
+        (Matrix4::from_angle_x(Rad::turn_div_2() * ((i / 10) as f32))
+            * Matrix4::from_angle_y(Rad::full_turn() * (i as f32 / 5.0 + 0.1))
             * Matrix4::from_angle_x(
-                TruncatedIcosahedron::pentagon_hexagon_angle()
-                    + if (i / 5) & 1 == 1 {
-                        TruncatedIcosahedron::hexagon_hexagon_angle()
-                    } else {
-                        Rad(0.0)
-                    },
+                TruncatedIcosahedron::pentagon_hexagon_angle() +
+                // This moves the 2nd ring down to its correct latitude.
+                TruncatedIcosahedron::hexagon_hexagon_angle() * (((i / 5) & 1) as f32),
             )
-            * Matrix4::from_angle_y(Rad::turn_div_6() / 2.0);
-        if i >= 10 {
-            m = Matrix4::from_angle_x(Rad::turn_div_2()) * m;
-        }
-
-        m.into()
+            * Matrix4::from_angle_y(
+                Rad::turn_div_6() / 2.0 +
+                // This turns the 2nd ring upside-down.
+                // Only important at subdivision level 0, where faces are triangles.
+                Rad::turn_div_2() * (((i / 5 + 1) & 1) as f32),
+            ))
+        .into()
     }
 }

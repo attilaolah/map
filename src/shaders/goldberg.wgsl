@@ -229,13 +229,15 @@ fn view_proj() -> mat4x4<f32> {
     ) * look_at_o(vec3<f32>(
         // Rotate around the Y axis.
         sin(time.secs / 2.0) * 4.0,
-        2.0, // sin(time.secs / 2.0) * 2.0,
+        sin(time.secs / 2.0) * 2.0,
         cos(time.secs / 2.0) * 4.0,
     ));
 }
 
 // Triangle:
 let TRI_V: u32 = 3u;  // number of edges / vertices
+// Angle from Icosahedron origin between triangle origin and vertices:
+let TRI_A: f32 = 0.652358139784; // = asin(4.0 * sqrt(3.0) / (3.0 * sqrt(10.0 + 2.0 * sqrt(5.0))))
 
 // Pentagon:
 // https://mathworld.wolfram.com/RegularPentagon.html
@@ -244,7 +246,7 @@ let PEN_T: u32 = 3u; // = PEN_V - 2u; number of triangles
 let PEN_VT: u32 = 9u; // = PEN_T * TRI_V; total number of vertices when triangulated
 // Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
 let PEN_ES: f32 = 1.1755705045849463; // = 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0));
-// Angle from Goldberg origin between Pentagon origin and vertices:
+// Angle from Goldberg origin between pentagon origin and vertices:
 let PEN_A: f32 = 0.35040541284731597; // = asin(TRU_ES / PEN_ES);
 
 // Hexagon:
@@ -254,7 +256,7 @@ let HEX_T: u32 = 4u; // = HEX_V - 2u; number of triangles
 let HEX_VT: u32 = 12u; // = HEX_T * TRI_V; total number of vertices when triangulated
 // Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
 let PEN_ES: f32 = 1.0;
-// Angle from Goldberg origin between Pentagon origin and vertices:
+// Angle from Goldberg origin between hexagon origin and vertices:
 let HEX_A: f32 = 0.415391548984; // asin(TRU_ES / HEX_ES);
 
 
@@ -289,19 +291,62 @@ fn goldberg_pentagons(ins: u32, idx: u32) -> VertexOutput {
 
 // Generate a single hexagonal face.
 fn goldberg_hexagon(idx: u32) -> vec4<f32> {
+    // For hexagonal faces, a single instance is used to paint all the faces.
+    // We create a "virtual" instance ID by grouping the number of vertices here:
+    let ins: u32 = idx / HEX_VT;
+    let idx: u32 = idx % HEX_VT;
+    let idh: u32 = poly_strip_i(HEX_V, idx);
+
     if (goldberg.subdiv == 0u) {
-        // TODO: Special-case, draw a triangle instead.
+        // Special case the zero-subdivision zoom by drawing an icosahedron.
+        // However, use all hexagonal faces so we can animate a transition between zoom levels.
+        return vec4<f32>(cart(
+            f32((idh + 1u) / 2u) * TAU / 3.0 + PI / 2.0,
+            TRI_A,
+        ), 1.0);
     }
-    return vec4<f32>(cart(
-        TAU / 6.0 * f32(poly_strip_i(HEX_V, idx)),
-        HEX_A * pow(0.5, f32(goldberg.subdiv - 1u)),
-    ), 1.0);
+
+    // Polar coordinates latitude:
+    let alpha: f32 = HEX_A * pow(0.5, f32(goldberg.subdiv - 1u));
+
+    if (ins == 0u) {
+        // The centre-most hexagon, no transformation is necessary.
+        return vec4<f32>(cart(f32(idh) * PI / 3.0, alpha), 1.0);
+    }
+
+    // Polar coordinates latitude at the previous (one bigger) zoom level:
+    let beta: f32 = HEX_A * pow(0.5, f32(goldberg.subdiv - 2u));
+
+    var v: vec3<f32>;
+    switch (idh) {
+        case 0u: {
+            v = cart(f32(ins + 1u) * PI / 3.0, beta);
+        }
+        case 1u: {
+            v = cart(f32(ins + 1u) * PI / 3.0, alpha);
+        }
+        case 2u: {
+            v = cart(f32(ins) * PI / 3.0, alpha);
+        }
+        case 3u: {
+            v = cart(f32(ins) * PI / 3.0, beta);
+        }
+        case 4u: {
+            // TODO!
+            v = cart(f32(ins) * PI / 3.0, beta);
+        }
+        default: {  // 5u
+            // TODO!
+            v = cart(f32(ins + 1u) * PI / 3.0, beta);
+        }
+    }
+    return vec4<f32>(v, 1.0);
 }
 
 fn goldberg_hexagons(ins: u32, idx: u32) -> VertexOutput {
-    var v = goldberg_static.transform_hex[ins] * goldberg_hexagon(idx);
+    let v = goldberg_static.transform_hex[ins] * goldberg_hexagon(idx);
     var out: VertexOutput;
-    out.uv = to_uv(vec2<f32>(sin(f32(ins)), cos(f32(ins))));
+    out.uv = to_uv(vec2<f32>(sin(f32(ins + idx / HEX_VT)), cos(f32(ins + idx / HEX_VT))));
     out.clip_position = view_proj() * v;
     return out;
 }
