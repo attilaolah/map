@@ -42,7 +42,7 @@ var<uniform> goldberg_static: GoldbergStatic;
 
 struct VertexOutput {
     [[builtin(position)]] clip_position: vec4<f32>;
-    [[location(0)]] uv: vec2<f32>;
+    [[location(0)]] normal: vec2<f32>;
 };
 
 /// Utility Functions
@@ -283,18 +283,16 @@ fn goldberg_pentagon(idx: u32) -> vec4<f32> {
 
 fn goldberg_pentagons(ins: u32, idx: u32) -> VertexOutput {
     let v = goldberg_static.transform_pen[ins] * goldberg_pentagon(idx);
+    let n = goldberg_static.transform_pen[ins] * vec4<f32>(0.0, 1.0, 0.0, 1.0);
+
     var out: VertexOutput;
-    out.uv = to_uv(vec2<f32>(sin(f32(ins)), cos(f32(ins))));
     out.clip_position = view_proj() * v;
+    out.normal = to_uv(n.xy);
     return out;
 }
 
 // Generate a single hexagonal face.
-fn goldberg_hexagon(idx: u32) -> vec4<f32> {
-    // For hexagonal faces, a single instance is used to paint all the faces.
-    // We create a "virtual" instance ID by grouping the number of vertices here:
-    let ins: u32 = idx / HEX_VT;
-    let idx: u32 = idx % HEX_VT;
+fn goldberg_hexagon(ins: u32, idx: u32) -> vec4<f32> {
     let idh: u32 = poly_strip_i(HEX_V, idx);
 
     if (goldberg.subdiv == 0u) {
@@ -343,11 +341,32 @@ fn goldberg_hexagon(idx: u32) -> vec4<f32> {
     return vec4<f32>(v, 1.0);
 }
 
+fn goldberg_hexagon_normal(ins: u32) -> vec4<f32> {
+    if (ins == 0u) {
+        // The centre-most hexagon, no transformation is necessary.
+        return vec4<f32>(0.0, 1.0, 0.0, 1.0);
+    }
+
+    return vec4<f32>(cart(
+        f32(ins) * PI / 3.0 + PI / 6.0,
+        // Polar coordinates latitude at the previous (one bigger) zoom level:
+        // TODO: This is not entirely precise; figure out what's the right value!
+        HEX_A * sqrt(3.0) / 2.0 * pow(0.5, f32(goldberg.subdiv - 2u)),
+    ), 1.0);
+}
+
 fn goldberg_hexagons(ins: u32, idx: u32) -> VertexOutput {
-    let v = goldberg_static.transform_hex[ins] * goldberg_hexagon(idx);
+    // For hexagonal faces, a single instance is used to paint all the faces.
+    // We create a "virtual" instance ID by grouping the number of vertices here:
+    let hex_ins: u32 = idx / HEX_VT;
+    let hex_idx: u32 = idx % HEX_VT;
+
+    let v = goldberg_static.transform_hex[ins] * goldberg_hexagon(hex_ins, hex_idx);
+    let n = goldberg_static.transform_hex[ins] * goldberg_hexagon_normal(hex_ins);
+
     var out: VertexOutput;
-    out.uv = to_uv(vec2<f32>(sin(f32(ins + idx / HEX_VT)), cos(f32(ins + idx / HEX_VT))));
     out.clip_position = view_proj() * v;
+    out.normal = to_uv(n.xy);
     return out;
 }
 
@@ -369,5 +388,5 @@ fn vs_main(
 
 [[stage(fragment)]]
 fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    return vec4<f32>(in.uv, 0.0, 1.0);
+    return vec4<f32>(in.normal, 0.0, 1.0);
 }
