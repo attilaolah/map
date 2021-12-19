@@ -280,6 +280,14 @@ fn goldberg_hexagon_angle() -> f32 {
         return asin(4.0 * sqrt(3.0) / (3.0 * sqrt(10.0 + 2.0 * sqrt(5.0))));
     }
 
+    // TODO: Looks like we're losing some precision below; pre-calculate this with heigher precision!
+    if (goldberg.subdiv == 2u) {
+        return asin(0.208347891105);
+    }
+    if (goldberg.subdiv == 3u) {
+        return asin(0.105035963489);
+    }
+
     var a: f32 = asin(4.0 / sqrt(58.0 + 18.0 * sqrt(5.0)));
     for (var s: u32 = 1u; s < goldberg.subdiv; s = s + 1u) {
         a = sin(0.5 * asin(a * sqrt(3.0) / sqrt(4.0 - a * a)));
@@ -320,7 +328,6 @@ fn goldberg_hexagon(ins: u32, idx: u32) -> vec4<f32> {
             alpha,
         ), 1.0);
     }
-
 
     // 3-fold radial symmetry index:
     let insr: u32 = ins / 2u;
