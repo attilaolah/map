@@ -300,11 +300,8 @@ impl Goldberg {
             // Draw a single hexagonal face.
             return 0..Hexagon::tri_vertices() + 1;
         }
-        if self.uniform.subdiv == 2 {
-            // Draw seven hexagonal faces: one middle one and a ring around it.
-            return 0..(Hexagon::tri_vertices() * 7) + 1;
-        }
-        0..Hexagon::tri_vertices() + 1 // todo!()
+        // Draw seven hexagonal faces: one middle one and a ring around it.
+        0..(Hexagon::tri_vertices() * 7) + 1
     }
 
     fn pen_instances() -> Range<u32> {

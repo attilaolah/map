@@ -228,22 +228,17 @@ fn view_proj() -> mat4x4<f32> {
         perspective(cam.fovy, cam.aspect, cam.znear, cam.zfar)
     ) * look_at_o(vec3<f32>(
         // Rotate around the Y axis.
-        sin(time.secs / 2.0) * 4.0,
-        sin(time.secs / 2.0) * 2.0,
-        cos(time.secs / 2.0) * 4.0,
+        sin(time.secs / 32.0) * 4.0,
+        sin(time.secs / 32.0) * 2.0,
+        cos(time.secs / 32.0) * 4.0,
     ));
 }
-
-// Triangle:
-let TRI_V: u32 = 3u;  // number of edges / vertices
-// Angle from Icosahedron origin between triangle origin and vertices:
-let TRI_A: f32 = 0.652358139784; // = asin(4.0 * sqrt(3.0) / (3.0 * sqrt(10.0 + 2.0 * sqrt(5.0))))
 
 // Pentagon:
 // https://mathworld.wolfram.com/RegularPentagon.html
 let PEN_V: u32 = 5u; // number of edges / vertices
 let PEN_T: u32 = 3u; // = PEN_V - 2u; number of triangles
-let PEN_VT: u32 = 9u; // = PEN_T * TRI_V; total number of vertices when triangulated
+let PEN_VT: u32 = 9u; // = PEN_T * 3u; total number of vertices when triangulated
 // Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
 let PEN_ES: f32 = 1.1755705045849463; // = 10.0 / sqrt(50.0 + 10.0 * sqrt(5.0));
 // Angle from Goldberg origin between pentagon origin and vertices:
@@ -253,7 +248,7 @@ let PEN_A: f32 = 0.35040541284731597; // = asin(TRU_ES / PEN_ES);
 // https://mathworld.wolfram.com/RegularHexagon.html
 let HEX_V: u32 = 6u; // number of edges / vertices
 let HEX_T: u32 = 4u; // = HEX_V - 2u; number of triangles
-let HEX_VT: u32 = 12u; // = HEX_T * TRI_V; total number of vertices when triangulated
+let HEX_VT: u32 = 12u; // = HEX_T * 3u; total number of vertices when triangulated
 // Edge scale factor, i.e. the edge of a pentagon with circumradius = 1.
 let PEN_ES: f32 = 1.0;
 // Angle from Goldberg origin between hexagon origin and vertices:
@@ -272,6 +267,26 @@ let ICO_AV: f32 = 1.1071487177940904; // = PI / 2.0 - atan(0.5);
 let TRU_VP: u32 = 108u; // = ICO_V * PEN_VT; total number of vertices of triangulated pentagonal faces
 // Edge scale factor, i.e. the edge of a truncated icosahedron with circumradius = 1.
 let TRU_ES: f32 = 0.40354821233519766; // = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0))
+
+//! TruncatedIcosahedron::hexagon_edge_angle()
+let TRU_HEXAGON_EDGE_ANGLE: f32 = 0.3648638427257538;
+//! TruncatedIcosahedron::hexagon_hexagon_angle()
+let TRU_HEXAGON_HEXAGON_ANGLE: f32 = 0.7297276854515076;
+
+// Calculates the angle to draw a single hexagonal face.
+// TODO: Pre-calculate these since this is pretty heavy calculation.
+fn goldberg_hexagon_angle() -> f32 {
+    if (goldberg.subdiv == 0u) {
+        return asin(4.0 * sqrt(3.0) / (3.0 * sqrt(10.0 + 2.0 * sqrt(5.0))));
+    }
+
+    var a: f32 = asin(4.0 / sqrt(58.0 + 18.0 * sqrt(5.0)));
+    for (var s: u32 = 1u; s < goldberg.subdiv; s = s + 1u) {
+        a = sin(0.5 * asin(a * sqrt(3.0) / sqrt(4.0 - a * a)));
+        a = 2.0 * a / sqrt(a * a + 3.0);
+    }
+    return a;
+}
 
 // Generate a single pentagonal face.
 fn goldberg_pentagon(idx: u32) -> vec4<f32> {
@@ -294,50 +309,31 @@ fn goldberg_pentagons(ins: u32, idx: u32) -> VertexOutput {
 // Generate a single hexagonal face.
 fn goldberg_hexagon(ins: u32, idx: u32) -> vec4<f32> {
     let idh: u32 = poly_strip_i(HEX_V, idx);
+    // Polar coordinates latitude:
+    let alpha: f32 = goldberg_hexagon_angle();
 
     if (goldberg.subdiv == 0u) {
         // Special case the zero-subdivision zoom by drawing an icosahedron.
         // However, use all hexagonal faces so we can animate a transition between zoom levels.
         return vec4<f32>(cart(
             f32((idh + 1u) / 2u) * TAU / 3.0 + PI / 2.0,
-            TRI_A,
+            alpha,
         ), 1.0);
     }
 
-    // Polar coordinates latitude:
-    let alpha: f32 = HEX_A * pow(0.5, f32(goldberg.subdiv - 1u));
 
-    if (ins == 0u) {
-        // The centre-most hexagon, no transformation is necessary.
-        return vec4<f32>(cart(f32(idh) * PI / 3.0, alpha), 1.0);
+    // 3-fold radial symmetry index:
+    let insr: u32 = ins / 2u;
+
+    var v = cart(f32(idh) * PI / 3.0, alpha);
+
+    if (ins > 0u) {
+        v = rot_y(f32(insr) * TAU / 3.0 + PI / 6.0)
+          * rot_x(TRU_HEXAGON_EDGE_ANGLE)
+          * rot_y(PI / 6.0)
+          * v;
     }
 
-    // Polar coordinates latitude at the previous (one bigger) zoom level:
-    let beta: f32 = HEX_A * pow(0.5, f32(goldberg.subdiv - 2u));
-
-    var v: vec3<f32>;
-    switch (idh) {
-        case 0u: {
-            v = cart(f32(ins + 1u) * PI / 3.0, beta);
-        }
-        case 1u: {
-            v = cart(f32(ins + 1u) * PI / 3.0, alpha);
-        }
-        case 2u: {
-            v = cart(f32(ins) * PI / 3.0, alpha);
-        }
-        case 3u: {
-            v = cart(f32(ins) * PI / 3.0, beta);
-        }
-        case 4u: {
-            // TODO!
-            v = cart(f32(ins) * PI / 3.0, beta);
-        }
-        default: {  // 5u
-            // TODO!
-            v = cart(f32(ins + 1u) * PI / 3.0, beta);
-        }
-    }
     return vec4<f32>(v, 1.0);
 }
 
