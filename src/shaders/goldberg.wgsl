@@ -277,15 +277,12 @@ let TRU_HEXAGON_HEXAGON_ANGLE: f32 = 0.7297276854515076;
 // TODO: Pre-calculate these since this is pretty heavy calculation.
 fn goldberg_hexagon_angle() -> f32 {
     if (goldberg.subdiv == 0u) {
+        // When subdivision is zero, we draw a triangle instead.
         return asin(4.0 * sqrt(3.0) / (3.0 * sqrt(10.0 + 2.0 * sqrt(5.0))));
     }
 
-    var a: f32 = 4.0 / sqrt(58.0 + 18.0 * sqrt(5.0));
-    for (var s: u32 = 1u; s < goldberg.subdiv; s = s + 1u) {
-        a = sin(0.5 * asin(a * sqrt(3.0) / sqrt(4.0 - a * a)));
-        a = 2.0 * a / sqrt(a * a + 3.0);
-    }
-    return asin(a);
+    let sa: f32 = sin(TRU_HEXAGON_HEXAGON_ANGLE * pow(0.5, f32(goldberg.subdiv)));
+    return asin(2.0 * sa / sqrt(sa * sa + 3.0));
 }
 
 // Generate a single pentagonal face.
