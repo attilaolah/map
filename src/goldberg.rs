@@ -316,7 +316,7 @@ impl Goldberg {
     fn pen_transform(i: u32) -> [[f32; 4]; 4] {
         let mut m = Matrix4::from_angle_x(Rad::turn_div_2() * ((i / 6) as f32));
 
-        // Order of operations is right-to-left when multiplying.
+        // Matrix operations are applied right-to-left when multiplying.
         if i % 6 != 0 {
             // Technically the "-1" in "i - 1" is not necessary.
             // However, it makes the pentagon with index 1 face towards the camera.
@@ -330,7 +330,7 @@ impl Goldberg {
     }
 
     fn hex_transform(i: u32) -> [[f32; 4]; 4] {
-        // Order of operations is right-to-left when multiplying.
+        // Matrix operations are applied right-to-left when multiplying.
         (Matrix4::from_angle_x(Rad::turn_div_2() * ((i / 10) as f32))
             * Matrix4::from_angle_y(Rad::full_turn() * (i as f32 / 5.0 + 0.1))
             * Matrix4::from_angle_x(
